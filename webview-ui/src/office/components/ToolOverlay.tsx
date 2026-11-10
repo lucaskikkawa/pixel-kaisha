@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 
+import { agentEngineBadge } from '../../cloud/engineBadge.js';
 import { Button } from '../../components/ui/Button.js';
 import { PixelIcon } from '../../components/ui/PixelIcon.js';
 import {
@@ -10,6 +11,7 @@ import {
   CONTEXT_GAUGE_GAP_PX,
   CONTEXT_GAUGE_HEIGHT_PX,
   CONTEXT_GAUGE_WIDTH_PX,
+  ENGINE_BADGE_TEXT_COLOR,
   OVERLAY_BUBBLE_Z_INDEX,
   OVERLAY_LABEL_SELECTED_Z_INDEX,
   OVERLAY_LABEL_Z_INDEX,
@@ -325,6 +327,18 @@ export function ToolOverlay({
                       }}
                     >
                       {teamRoleLabel}
+                    </span>
+                  )}
+                  {!isSub && (
+                    <span
+                      className="self-start leading-none px-3 text-2xs"
+                      data-testid="engine-badge"
+                      style={{
+                        background: agentEngineBadge(id).color,
+                        color: ENGINE_BADGE_TEXT_COLOR,
+                      }}
+                    >
+                      {agentEngineBadge(id).label}
                     </span>
                   )}
                   <span
