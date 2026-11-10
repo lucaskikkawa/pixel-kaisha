@@ -42,4 +42,4 @@ UI side: `webview-ui/src/cloud/engineBadge.ts`, shown as a coloured badge on the
 
 ## Dev fixture
 
-`npm run dev` in `webview-ui/`, then open `http://localhost:5173/?mock=cloud` (add `&cloud=unavailable` for the offline state). The fixture (`cloud/cloudMock.ts`) plays three local agents (Claude, Codex, agy) and three Codex Cloud tasks; the running one turns ready after two simulated polls.
+`npm run dev` in `webview-ui/`, then open `http://localhost:5173/?mock=cloud` (add `&cloud=unavailable` for the offline state). The fixture (`cloud/cloudFixture.ts`, played by `cloud/cloudMock.ts`) plays three local agents (Claude, Codex, agy) and three Codex Cloud tasks; the running one turns ready after two simulated polls.

@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 
 import { beforeEach, test } from 'vitest';
 
-import { mockCloudMessage } from '../src/cloud/cloudMock.js';
+import { mockCloudMessage } from '../src/cloud/cloudFixture.js';
 import {
   cloudProviders,
   cloudStatus,
