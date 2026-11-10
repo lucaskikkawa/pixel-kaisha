@@ -7,7 +7,9 @@ import {
 } from '../constants.js';
 import type { CloudTask } from './cloudStore.js';
 import { cloudProviders, safeTaskUrl, subscribeCloud } from './cloudStore.js';
+import { shortTitle } from './cloudSummary.js';
 import { CLOUD_STATUS_VIEW } from './cloudView.js';
+import { useShortScreen } from './useShortScreen.js';
 
 // A 12×12 pixel ghost (our own art): 1 = body, 2 = eye.
 const GHOST_ROWS = [
@@ -60,6 +62,33 @@ export function GhostSprite({ color, size }: { color: string; size: number }) {
 function openTask(task: CloudTask) {
   const url = safeTaskUrl(task.url);
   if (url) window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+/** Cover screen: one-line chip (ghost + status + short title), tap opens. */
+function GhostChip({ task, providerName }: { task: CloudTask; providerName: string }) {
+  const view = CLOUD_STATUS_VIEW[task.status];
+  return (
+    <button
+      type="button"
+      onClick={() => openTask(task)}
+      title={`${providerName}: ${task.title} (${task.rawStatus || view.label})`}
+      data-testid="cloud-ghost"
+      data-status={task.status}
+      className="pixel-panel flex items-center gap-3 px-3 py-0 cursor-pointer text-2xs leading-none whitespace-nowrap"
+      style={{ opacity: task.status === 'unavailable' ? 0.5 : 1 }}
+    >
+      <span
+        className={task.status === 'active' ? 'cloud-ghost-float' : undefined}
+        style={{ opacity: 0.6 }}
+      >
+        <GhostSprite color={view.color} size={16} />
+      </span>
+      <span style={{ color: view.color }} data-testid="cloud-status">
+        {view.label}
+      </span>
+      <span>{shortTitle(task.title, 14)}</span>
+    </button>
+  );
 }
 
 function GhostCard({
@@ -119,7 +148,34 @@ function GhostCard({
 /** The ☁ ghosts of every cloud provider, docked at the top-right of the office. */
 export function CloudGhosts({ compact = false }: { compact?: boolean }) {
   const providers = useSyncExternalStore(subscribeCloud, cloudProviders);
+  const short = useShortScreen();
   if (providers.length === 0) return null;
+  if (compact && short) {
+    // Cover screen: a single ☁ header per provider and one-line chips.
+    return (
+      <div
+        className="absolute z-10 flex flex-col items-end gap-1 right-2 mobile-safe-top pointer-events-auto"
+        data-testid="cloud-ghosts"
+        data-variant="cover"
+        style={{ marginTop: 36, maxWidth: '62vw' }}
+      >
+        {providers.map((p) => (
+          <div key={p.providerId} className="flex flex-col items-end gap-1">
+            <span className="text-2xs leading-none pixel-panel px-3" data-testid="cloud-vendor">
+              ☁ {p.providerName}
+              {!p.available && ' · unavailable'}
+            </span>
+            {p.tasks.slice(0, 3).map((t) => (
+              <GhostChip key={t.id} task={t} providerName={p.providerName} />
+            ))}
+            {p.tasks.length > 3 && (
+              <span className="text-2xs leading-none">+{p.tasks.length - 3}</span>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  }
   return (
     <div
       // Desktop: top-left, right of the zoom buttons (the agent cards own the

@@ -14,18 +14,18 @@ Objeto raiz: `tasks` (lista) e `cursor` (string ou `null`; `null` = última pág
 
 Cada tarefa:
 
-| Campo | Tipo | Observação |
-|---|---|---|
-| `id` | string | prefixo `task_e_…` |
-| `url` | string | página da tarefa no ChatGPT/Codex (o clique do fantasma ☁ abre aqui) |
-| `title` | string | título gerado (pode conter texto do usuário) |
-| `status` | string | ver §3 |
-| `updated_at` | string | ISO-8601 em UTC com nanossegundos |
-| `environment_id` | string ou null | null observado |
-| `environment_label` | string | nome do ambiente |
-| `summary` | objeto | `files_changed`, `lines_added`, `lines_removed` |
-| `is_review` | bool | tarefa de review |
-| `attempt_total` | int | número de tentativas |
+| Campo               | Tipo           | Observação                                                           |
+| ------------------- | -------------- | -------------------------------------------------------------------- |
+| `id`                | string         | prefixo `task_e_…`                                                   |
+| `url`               | string         | página da tarefa no ChatGPT/Codex (o clique do fantasma ☁ abre aqui) |
+| `title`             | string         | título gerado (pode conter texto do usuário)                         |
+| `status`            | string         | ver §3                                                               |
+| `updated_at`        | string         | ISO-8601 em UTC com nanossegundos                                    |
+| `environment_id`    | string ou null | null observado                                                       |
+| `environment_label` | string         | nome do ambiente                                                     |
+| `summary`           | objeto         | `files_changed`, `lines_added`, `lines_removed`                      |
+| `is_review`         | bool           | tarefa de review                                                     |
+| `attempt_total`     | int            | número de tentativas                                                 |
 
 Exemplo anonimizado (capturado por nós):
 
@@ -49,12 +49,12 @@ Três linhas: `[STATUS] título`, `ambiente • data local`, e um resumo do diff
 
 ## 5. Erros e códigos de saída
 
-| Situação | Saída | Exit |
-|---|---|---|
-| OK | JSON no stdout | 0 |
-| `--limit` fora de 1–20 | erro de validação do argumento no stderr | 2 |
-| id inexistente (`status`) | erro HTTP 404 no stderr ("Invalid task ID") | 1 |
-| sem login (`CODEX_HOME` vazio) | stderr pede `codex login` | 1 |
+| Situação                       | Saída                                       | Exit |
+| ------------------------------ | ------------------------------------------- | ---- |
+| OK                             | JSON no stdout                              | 0    |
+| `--limit` fora de 1–20         | erro de validação do argumento no stderr    | 2    |
+| id inexistente (`status`)      | erro HTTP 404 no stderr ("Invalid task ID") | 1    |
+| sem login (`CODEX_HOME` vazio) | stderr pede `codex login`                   | 1    |
 
 ## 6. Logs
 

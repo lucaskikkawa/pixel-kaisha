@@ -36,14 +36,14 @@ Não existe `SessionEnd`: o fim é o `Stop` (com `terminationReason`, ex. `NO_TO
 
 ## 4. Mapeamento para `AgentEvent`
 
-| agy | AgentEvent |
-|---|---|
-| `SessionStart` | sessionStart (id = `conversationId`) |
-| `PreToolUse` | toolStart (id = `toolCall.id`, rótulo a partir de `toolCall.name`) |
-| `PostToolUse` | toolEnd (falha se `error` não vazio) |
-| `PreInvocation` | progress (opcional; "pensando") |
-| `Stop` | turnEnd (`awaitingInput` quando `NO_TOOL_CALL` e `fullyIdle`) |
-| — | sessionEnd por inatividade (timer), já que não há evento |
+| agy             | AgentEvent                                                         |
+| --------------- | ------------------------------------------------------------------ |
+| `SessionStart`  | sessionStart (id = `conversationId`)                               |
+| `PreToolUse`    | toolStart (id = `toolCall.id`, rótulo a partir de `toolCall.name`) |
+| `PostToolUse`   | toolEnd (falha se `error` não vazio)                               |
+| `PreInvocation` | progress (opcional; "pensando")                                    |
+| `Stop`          | turnEnd (`awaitingInput` quando `NO_TOOL_CALL` e `fullyIdle`)      |
+| —               | sessionEnd por inatividade (timer), já que não há evento           |
 
 ## 5. Custo estimado
 

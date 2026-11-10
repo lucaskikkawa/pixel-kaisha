@@ -16,11 +16,11 @@ Fecho da Tarefa 0 — 10/11/2026. Base: `fork-internals.md`, `hooks-claude.md`, 
 
 Regra do Lucas: hooks **só** em `/workspace/pixel-agents/sandbox`, nunca em `~/.claude`, `~/.codex`, `~/.gemini`.
 
-| Motor | Arquivo na sandbox | Funciona? | Observação |
-|---|---|---|---|
-| Claude Code 2.1.310 | `sandbox/.claude/settings.json` | **Sim** (testado, `claude -p`) | Sem trust em `-p`; 10 eventos capturados |
-| agy 1.5.4 | `sandbox/.agents/hooks.json` | **Sim** (testado, `agy -p`) | Cuidado com o `PreToolUse` (ver acima); cwd do hook = `.agents/` |
-| Codex 0.163.0 | `sandbox/.codex/hooks.json` | **Não, sozinho** | Arquivo é lido, mas hooks ficam em silêncio sem trust de projeto **e** trust por hash, ambos gravados no `~/.codex/config.toml` |
+| Motor               | Arquivo na sandbox              | Funciona?                      | Observação                                                                                                                      |
+| ------------------- | ------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| Claude Code 2.1.310 | `sandbox/.claude/settings.json` | **Sim** (testado, `claude -p`) | Sem trust em `-p`; 10 eventos capturados                                                                                        |
+| agy 1.5.4           | `sandbox/.agents/hooks.json`    | **Sim** (testado, `agy -p`)    | Cuidado com o `PreToolUse` (ver acima); cwd do hook = `.agents/`                                                                |
+| Codex 0.163.0       | `sandbox/.codex/hooks.json`     | **Não, sozinho**               | Arquivo é lido, mas hooks ficam em silêncio sem trust de projeto **e** trust por hash, ambos gravados no `~/.codex/config.toml` |
 
 ### Bloqueio do Codex — decisão necessária do Lucas
 
