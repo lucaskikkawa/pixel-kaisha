@@ -1,0 +1,73 @@
+[
+  {
+    "conversationId": "0000bbbb-1111-2222-3333-444455556666",
+    "workspacePaths": [
+      "/sandbox"
+    ],
+    "transcriptPath": "/home/user/.gemini/antigravity-cli/brain/example/.system_generated/logs/transcript_full.jsonl",
+    "artifactDirectoryPath": "/home/user/.gemini/antigravity-cli/brain/example",
+    "modelName": "example-model",
+    "lastUserInput": "PRIVATE PROMPT TEXT",
+    "cwd": "/sandbox",
+    "hookEventName": "SessionStart"
+  },
+  {
+    "conversationId": "0000bbbb-1111-2222-3333-444455556666",
+    "workspacePaths": [
+      "/sandbox"
+    ],
+    "transcriptPath": "/home/user/.gemini/antigravity-cli/brain/example/.system_generated/logs/transcript_full.jsonl",
+    "artifactDirectoryPath": "/home/user/.gemini/antigravity-cli/brain/example",
+    "modelName": "example-model",
+    "lastUserInput": "PRIVATE PROMPT TEXT",
+    "cwd": "/sandbox",
+    "hookEventName": "PreToolUse",
+    "stepIdx": 2,
+    "toolCall": {
+      "id": "toolu_example1",
+      "name": "run_command",
+      "args": {
+        "CommandLine": "python3 calc/calc.py 2 + 3",
+        "WaitMsBeforeAsync": 500,
+        "toolSummary": "run calculator"
+      }
+    }
+  },
+  {
+    "conversationId": "0000bbbb-1111-2222-3333-444455556666",
+    "workspacePaths": [
+      "/sandbox"
+    ],
+    "transcriptPath": "/home/user/.gemini/antigravity-cli/brain/example/.system_generated/logs/transcript_full.jsonl",
+    "artifactDirectoryPath": "/home/user/.gemini/antigravity-cli/brain/example",
+    "modelName": "example-model",
+    "lastUserInput": "PRIVATE PROMPT TEXT",
+    "cwd": "/sandbox",
+    "hookEventName": "PostToolUse",
+    "stepIdx": 2,
+    "toolCall": {
+      "id": "toolu_example1",
+      "name": "run_command",
+      "args": {
+        "CommandLine": "python3 calc/calc.py 2 + 3"
+      }
+    },
+    "error": ""
+  },
+  {
+    "conversationId": "0000bbbb-1111-2222-3333-444455556666",
+    "workspacePaths": [
+      "/sandbox"
+    ],
+    "transcriptPath": "/home/user/.gemini/antigravity-cli/brain/example/.system_generated/logs/transcript_full.jsonl",
+    "artifactDirectoryPath": "/home/user/.gemini/antigravity-cli/brain/example",
+    "modelName": "example-model",
+    "lastUserInput": "PRIVATE PROMPT TEXT",
+    "cwd": "/sandbox",
+    "hookEventName": "Stop",
+    "executionNum": 0,
+    "terminationReason": "NO_TOOL_CALL",
+    "error": "",
+    "fullyIdle": true
+  }
+]

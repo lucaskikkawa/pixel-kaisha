@@ -12,19 +12,22 @@
  */
 
 import type { HookProvider } from '../../../core/src/provider.js';
+import { agyProvider } from './hook/agy/agy.js';
+import { AGY_HOOK_SCRIPT_NAME } from './hook/agy/constants.js';
 import { copyBundledScript } from './hook/claude/bundledScripts.js';
 import { claudeProvider } from './hook/claude/claude.js';
 import { CLAUDE_HOOK_SCRIPT_NAME } from './hook/claude/constants.js';
 import { codexProvider } from './hook/codex/codex.js';
 import { CODEX_HOOK_SCRIPT_NAME } from './hook/codex/constants.js';
 
-export { claudeProvider, codexProvider };
+export { agyProvider, claudeProvider, codexProvider };
 export { copyHookScript } from './hook/claude/claudeHookInstaller.js';
 
 /** The bundled hook script each provider's hooks run (dist/hooks/<name>). */
 const HOOK_SCRIPT_BY_PROVIDER: Readonly<Record<string, string>> = {
   [claudeProvider.id]: CLAUDE_HOOK_SCRIPT_NAME,
   [codexProvider.id]: CODEX_HOOK_SCRIPT_NAME,
+  [agyProvider.id]: AGY_HOOK_SCRIPT_NAME,
 };
 
 /** Copy the hook script of `providerId` from the package to
@@ -37,7 +40,7 @@ export function copyProviderHookScript(packageRoot: string, providerId: string):
 /** Every bundled hook provider, in registration order. The consent gate loops
  *  over this at the webviewReady handshake (one ask per provider that needs
  *  one) and `hooksConsentResponse` resolves its provider id against it. */
-export const hookProviders: readonly HookProvider[] = [claudeProvider, codexProvider];
+export const hookProviders: readonly HookProvider[] = [claudeProvider, codexProvider, agyProvider];
 
 /** Resolve a wire-supplied provider id, or undefined for an unknown one —
  *  the caller writes nothing on undefined (fail-closed, like a junk choice). */

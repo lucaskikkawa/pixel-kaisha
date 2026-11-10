@@ -47,6 +47,7 @@ function buildHooks() {
     'claude-hook': path.join(providersDir, 'claude', 'hooks', 'claude-hook.ts'),
     'claude-statusline': path.join(providersDir, 'claude', 'hooks', 'claude-statusline.ts'),
     'codex-hook': path.join(providersDir, 'codex', 'hooks', 'codex-hook.ts'),
+    'agy-hook': path.join(providersDir, 'agy', 'hooks', 'agy-hook.ts'),
   };
   const entries = Object.fromEntries(
     Object.entries(sources).filter(([, entry]) => fs.existsSync(entry)),

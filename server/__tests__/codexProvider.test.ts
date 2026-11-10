@@ -79,7 +79,7 @@ describe('codex provider: normalization (fixtures)', () => {
   });
 
   it('is registered next to claude', () => {
-    expect(hookProviders.map((p) => p.id)).toEqual(['claude', 'codex']);
+    expect(hookProviders.map((p) => p.id)).toEqual(['claude', 'codex', 'agy']);
     expect(hookProviderById('codex')).toBe(codexProvider);
   });
 });
