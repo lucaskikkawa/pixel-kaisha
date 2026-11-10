@@ -119,6 +119,7 @@
     "test": "npm run test:webview && npm run test:server && npm run test:package-contract && npm run test:scripts",
     "verify:npm-package": "node scripts/verify-npm-package.mjs",
     "e2e": "node scripts/run-e2e.mjs",
+    "capture:kaisha": "node scripts/kaisha-capture.mjs",
     "e2e:debug": "node scripts/run-e2e.mjs --debug",
     "e2e:inventory": "node scripts/generate-e2e-inventory.mjs",
     "test:report": "node scripts/build-allure-report.mjs",

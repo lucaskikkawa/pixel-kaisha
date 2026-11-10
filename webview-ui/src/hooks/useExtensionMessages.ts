@@ -4,6 +4,8 @@ import type { Directory, HooksConsentRequest } from '../../../core/src/messages.
 import { handleCastMessage } from '../characters/castMessages.js';
 import { castStore } from '../characters/castStore.js';
 import { startOfficeSync } from '../characters/officeSprites.js';
+import { handleCloudMessage } from '../cloud/cloudStore.js';
+import { forgetAgentProvider, setAgentProvider } from '../cloud/engineBadge.js';
 import { cardOrderOf } from '../components/cardBar.js';
 import { playDoneSound, playPermissionSound, setSoundEnabled } from '../notificationSound.js';
 import { clearAgentContextUsed, setAgentContextUsed } from '../office/contextGauge.js';
@@ -350,6 +352,8 @@ export function useExtensionMessages(
 
       // Usage bars (usage/usageStore.ts): the bridge's state and the plan usage.
       if (handleUsageMessage(msg)) return;
+      // Cloud agents (cloud/cloudStore.ts): the ☁ ghosts from the cloud poller.
+      if (handleCloudMessage(msg)) return;
       // The cast (characters/castMessages.ts): profiles, items, looks, external sprites.
       if (handleCastMessage(msg, os)) return;
 
@@ -419,6 +423,7 @@ export function useExtensionMessages(
         const teammateName = msg.teammateName as string | undefined;
         const teammateParentId = msg.parentAgentId as number | undefined;
         const teamName = msg.teamName as string | undefined;
+        setAgentProvider(id, msg.providerId);
         setAgents((prev) => (prev.includes(id) ? prev : [...prev, id]));
         // Don't auto-select teammates (keep focus on lead)
         if (!isTeammate) {
@@ -465,6 +470,7 @@ export function useExtensionMessages(
         }
         saveAgentSeats(os);
       } else if (msg.type === 'agentClosed') {
+        forgetAgentProvider(msg.id as number);
         closeAgent(os, msg.id as number);
       } else if (msg.type === 'existingAgents') {
         const incoming = msg.agents as number[];
@@ -475,6 +481,8 @@ export function useExtensionMessages(
         const meta = (msg.agentMeta || {}) as Record<number, ExistingAgentMeta>;
         const directoryNames = (msg.directoryNames || {}) as Record<number, string>;
         const externalAgents = (msg.externalAgents || {}) as Record<number, boolean>;
+        const providerIds = (msg.providerIds || {}) as Record<number, string>;
+        for (const id of incoming) setAgentProvider(id, providerIds[id]);
         const headlessAgents: Record<number, boolean> = {};
         for (const id of incoming) {
           noteDirectoryName(directoryNames[id]);
