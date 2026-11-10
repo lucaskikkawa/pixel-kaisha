@@ -1,5 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 
+import { agentEngineBadge } from '../../cloud/engineBadge.js';
+import { useShortScreen } from '../../cloud/useShortScreen.js';
 import { Button } from '../../components/ui/Button.js';
 import { PixelIcon } from '../../components/ui/PixelIcon.js';
 import {
@@ -10,6 +12,7 @@ import {
   CONTEXT_GAUGE_GAP_PX,
   CONTEXT_GAUGE_HEIGHT_PX,
   CONTEXT_GAUGE_WIDTH_PX,
+  ENGINE_BADGE_TEXT_COLOR,
   OVERLAY_BUBBLE_Z_INDEX,
   OVERLAY_LABEL_SELECTED_Z_INDEX,
   OVERLAY_LABEL_Z_INDEX,
@@ -112,6 +115,8 @@ export function ToolOverlay({
   onCloseAgent,
   alwaysShowOverlay,
 }: ToolOverlayProps) {
+  // Short screen (~360×374): compact labels — smaller text, no directory line.
+  const short = useShortScreen();
   const [, setTick] = useState(0);
   useEffect(() => {
     let rafId = 0;
@@ -327,16 +332,28 @@ export function ToolOverlay({
                       {teamRoleLabel}
                     </span>
                   )}
+                  {!isSub && (
+                    <span
+                      className="self-start leading-none px-3 text-2xs"
+                      data-testid="engine-badge"
+                      style={{
+                        background: agentEngineBadge(id).color,
+                        color: ENGINE_BADGE_TEXT_COLOR,
+                      }}
+                    >
+                      {agentEngineBadge(id).label}
+                    </span>
+                  )}
                   <span
                     className="overflow-hidden text-ellipsis block leading-none"
                     style={{
-                      fontSize: isSub ? '20px' : '22px',
+                      fontSize: short ? '18px' : isSub ? '20px' : '22px',
                       fontStyle: isSub ? 'italic' : undefined,
                     }}
                   >
                     {activityText}
                   </span>
-                  {ch.directoryName && (
+                  {ch.directoryName && !short && (
                     <span className="text-2xs leading-none overflow-hidden text-ellipsis block">
                       {ch.directoryName}
                     </span>
