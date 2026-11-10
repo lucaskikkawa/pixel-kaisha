@@ -877,3 +877,13 @@ export const MUSIC_VERSION_GAP_PX = 6;
 export const VERSION_LABEL_BOTTOM_PX = 10;
 /** The update notice / changelog tooltip, this far above the label's spot. */
 export const VERSION_NOTICE_ABOVE_PX = 34;
+
+// ── Pixel Kaisha: cloud ghosts and engine badges ────────────────
+export const ENGINE_CLAUDE_COLOR = '#d97757';
+export const ENGINE_CODEX_COLOR = '#10a37f';
+export const ENGINE_AGY_COLOR = '#4285f4';
+export const ENGINE_OTHER_COLOR = '#888888';
+export const ENGINE_BADGE_TEXT_COLOR = '#ffffff';
+export const CLOUD_READY_COLOR = '#58a6ff';
+export const CLOUD_MUTED_COLOR = '#8b949e';
+export const CLOUD_GHOST_EYE_COLOR = '#1e1e2e';

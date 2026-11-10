@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 
 import { toMajorMinor } from './changelogData.js';
 import { CharactersView } from './characters/ui/CharactersView.js';
+import { CloudGhosts } from './cloud/CloudGhosts.js';
 import { AgentCardBar } from './components/AgentCardBar.js';
 import { BottomToolbar } from './components/BottomToolbar.js';
 import { ChangelogModal } from './components/ChangelogModal.js';
@@ -81,6 +82,12 @@ function App() {
     // In VS Code mode, the extension sends all state via postMessage.
     if (isBrowserRuntime && import.meta.env.DEV) {
       void import('./browserMock.js').then(({ dispatchMockMessages }) => dispatchMockMessages());
+      // Pixel Kaisha: `?mock=cloud` plays the B3 cloud-poller fixture.
+      if (window.location.search.includes('mock=cloud')) {
+        void import('./cloud/cloudMock.js').then(({ dispatchCloudMock }) =>
+          window.setTimeout(() => dispatchCloudMock(window.location.search), 300),
+        );
+      }
     }
   }, []);
 
@@ -784,6 +791,8 @@ function App() {
           }
         />
       )}
+
+      {!isDebugMode && <CloudGhosts compact={isMobile} />}
 
       <ConnectionIndicator />
     </div>
