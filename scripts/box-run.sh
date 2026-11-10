@@ -9,7 +9,8 @@
 #
 # Environment overrides: KAISHA_HOST (127.0.0.1), KAISHA_PORT (3100),
 # KAISHA_SESSION (kaisha), KAISHA_LOG (~/.pixel-agents/kaisha-server.log),
-# KAISHA_EXTRA_ARGS (extra CLI flags, e.g. "--no-terminal").
+# KAISHA_EXTRA_ARGS (extra CLI flags, e.g. "--no-terminal"),
+# KAISHA_HOOKS_PROJECT_DIR (/workspace/pixel-agents/sandbox; "user" = home configs).
 #
 # The token is never printed to the log by the server; `status`/`url` read it
 # from ~/.pixel-agents/standalone-token and print it to YOUR terminal only.
@@ -23,6 +24,9 @@ STATE_DIR="${HOME}/.pixel-agents"
 LOG="${KAISHA_LOG:-${STATE_DIR}/kaisha-server.log}"
 TOKEN_FILE="${STATE_DIR}/standalone-token"
 EXTRA_ARGS="${KAISHA_EXTRA_ARGS:-}"
+# Hooks are installed ONLY in this project (never in ~/.claude, ~/.codex, ~/.gemini).
+# Set KAISHA_HOOKS_PROJECT_DIR=user to fall back to user-level hooks (not on the box).
+HOOKS_DIR="${KAISHA_HOOKS_PROJECT_DIR:-/workspace/pixel-agents/sandbox}"
 HEALTH_URL="http://${HOST}:${PORT}/api/health"
 
 die() { echo "box-run: $*" >&2; exit 1; }
@@ -59,8 +63,10 @@ start() {
   mkdir -p "${STATE_DIR}"
   : > "${LOG}"
   # shellcheck disable=SC2086 # EXTRA_ARGS is intentionally word-split
+  local hooks_env=""
+  [[ "${HOOKS_DIR}" != "user" ]] && hooks_env="PIXEL_KAISHA_HOOKS_PROJECT_DIR='${HOOKS_DIR}' "
   tmux new-session -d -s "${SESSION}" -c "${ROOT}" \
-    "exec node dist/cli.js --host '${HOST}' --port '${PORT}' ${EXTRA_ARGS} >>'${LOG}' 2>&1"
+    "${hooks_env}exec node dist/cli.js --host '${HOST}' --port '${PORT}' ${EXTRA_ARGS} >>'${LOG}' 2>&1"
   for _ in $(seq 1 50); do
     if health >/dev/null; then
       echo "box-run: started on ${HOST}:${PORT} (tmux '${SESSION}', log ${LOG})."
@@ -105,6 +111,6 @@ case "${cmd}" in
   restart) stop; start "${1:-}" ;;
   status) status ;;
   url) tokened_url || die "no token yet; start the server once" ;;
-  -h|--help|help) sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//' ;;
+  -h|--help|help) sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//' ;;
   *) die "unknown command '${cmd}' (start|stop|restart|status|url)" ;;
 esac

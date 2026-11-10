@@ -34,9 +34,11 @@ import {
   WILDCARD_HOSTNAMES,
 } from './constants.js';
 import { FileStateAdapter } from './fileStateAdapter.js';
+import { hooksProjectDir } from './providers/hook/shared/hooksScope.js';
 import {
   claudeProvider,
   copyHookScript,
+  copyProviderHookScript,
   hookProviderById,
   hookProviders,
 } from './providers/index.js';
@@ -321,6 +323,8 @@ async function main(): Promise<void> {
   try {
     // Create runtime first (before server.start, so we can pass it in)
     const runtime = new AgentRuntime(store, claudeProvider);
+    // Pixel Kaisha: each /api/hooks/<id> event is normalized by provider <id>.
+    runtime.setHookProviders(hookProviders);
 
     // Agents whose terminals outlived the last server (--pty-host): back in
     // the office before any browser connects.
@@ -357,6 +361,15 @@ async function main(): Promise<void> {
           provider.id === claudeProvider.id &&
           !copyHookScriptOrReport(packageRoot, ' (user toggle)')
         ) {
+          return;
+        }
+        if (
+          provider.id !== claudeProvider.id &&
+          !copyProviderHookScript(packageRoot, provider.id)
+        ) {
+          console.error(
+            `[Pixel Agents] ${provider.displayName} hooks NOT installed: hook script missing.`,
+          );
           return;
         }
         try {
@@ -482,6 +495,27 @@ async function main(): Promise<void> {
       console.log(
         '[Pixel Agents] Hooks disabled — enable "Instant Detection (Hooks)" in the UI settings to install them.',
       );
+    }
+
+    const scopedDir = hooksProjectDir();
+    console.log(
+      scopedDir
+        ? `[Pixel Kaisha] Hooks are project-scoped: installers write only under ${scopedDir}`
+        : '[Pixel Kaisha] Hooks are user-level (set PIXEL_KAISHA_HOOKS_PROJECT_DIR to scope them to one project)',
+    );
+
+    // Pixel Kaisha: other providers (Codex, …) install on startup only when the
+    // user already granted consent for them and left them enabled.
+    for (const provider of hookProviders) {
+      if (provider.id === claudeProvider.id) continue;
+      if (getHooksConsent(provider.id) !== 'granted' || !getHooksEnabled(provider.id)) continue;
+      if (!copyProviderHookScript(packageRoot, provider.id)) continue;
+      try {
+        await provider.installHooks(`http://127.0.0.1:${config.port}`, config.token);
+        console.log(`[Pixel Agents] ${provider.displayName} hooks installed`);
+      } catch (err) {
+        console.error(`[Pixel Agents] ${err instanceof Error ? err.message : String(err)}`);
+      }
     }
 
     // Start scanning for external sessions (Claude running in user's terminal)

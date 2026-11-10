@@ -164,7 +164,7 @@ export class AgentRuntime {
 
     // Wire hook lifecycle callbacks to shared agent operations
     this.hookEventHandler.setLifecycleCallbacks({
-      onExternalSessionDetected: (sessionId, transcriptPath, cwd) => {
+      onExternalSessionDetected: (sessionId, transcriptPath, cwd, providerId) => {
         const projectDir = transcriptPath ? path.dirname(transcriptPath) : cwd;
         // Teammate session of a tracked lead? Attach it as a teammate character
         // instead of adopting a generic external agent -- and regardless of the
@@ -223,6 +223,7 @@ export class AgentRuntime {
           this.permissionTimers,
           () => this.store.persist(),
           (agent) => this.registerAgent(agent.sessionId, agent.id),
+          providerId,
         );
       },
       onSessionClear: (agentId, newSessionId, newTranscriptPath) => {
@@ -297,6 +298,12 @@ export class AgentRuntime {
   }
 
   // ── Hook event routing ──
+
+  /** Register every hook provider the server accepts events from, so each
+   *  event is normalized by the provider named in its route. */
+  setHookProviders(providers: readonly HookProvider[]): void {
+    this.hookEventHandler.setProviders(providers);
+  }
 
   /** Route an incoming hook event to the appropriate agent. */
   handleHookEvent(providerId: string, event: Record<string, unknown>): void {

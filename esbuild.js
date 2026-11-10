@@ -39,12 +39,19 @@ function copyAssets() {
  * Produces a self-contained CJS file with shebang for Claude Code to execute.
  */
 function buildHooks() {
-  const hooksDir = path.join(__dirname, 'server', 'src', 'providers', 'hook', 'claude', 'hooks');
-  // The hook script, and the status line bridge (Settings → Usage Bars).
-  const entries = ['claude-hook.ts', 'claude-statusline.ts']
-    .map((name) => path.join(hooksDir, name))
-    .filter((entry) => fs.existsSync(entry));
-  if (entries.length === 0) return;
+  const providersDir = path.join(__dirname, 'server', 'src', 'providers', 'hook');
+  // Claude: the hook script and the status line bridge (Settings → Usage Bars).
+  // Pixel Kaisha: one hook script per extra provider. Named entries keep every
+  // output flat in dist/hooks/ although the sources live in different folders.
+  const sources = {
+    'claude-hook': path.join(providersDir, 'claude', 'hooks', 'claude-hook.ts'),
+    'claude-statusline': path.join(providersDir, 'claude', 'hooks', 'claude-statusline.ts'),
+    'codex-hook': path.join(providersDir, 'codex', 'hooks', 'codex-hook.ts'),
+  };
+  const entries = Object.fromEntries(
+    Object.entries(sources).filter(([, entry]) => fs.existsSync(entry)),
+  );
+  if (Object.keys(entries).length === 0) return;
   require('esbuild').buildSync({
     entryPoints: entries,
     bundle: true,

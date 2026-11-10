@@ -38,6 +38,7 @@ interface SessionLifecycleCallbacks {
     sessionId: string,
     transcriptPath: string | undefined,
     cwd: string,
+    providerId?: string,
   ) => void;
   /** Called when /clear is detected via hooks (SessionEnd reason=clear + SessionStart source=clear). */
   onSessionClear?: (
@@ -59,6 +60,12 @@ interface SessionLifecycleCallbacks {
 
 export class HookEventHandler {
   private lifecycleCallbacks: SessionLifecycleCallbacks = {};
+  /** The provider given at construction: normalizes events whose provider id
+   *  is not registered (legacy single-provider behaviour). */
+  private readonly defaultProvider: HookProvider;
+  /** Other providers by id. Events POSTed to `/api/hooks/<id>` are normalized
+   *  by the provider registered under that id, never by the default one. */
+  private readonly extraProviders = new Map<string, HookProvider>();
 
   /** Highest HookProvider.protocolVersion this handler understands. */
   private static readonly SUPPORTED_PROTOCOL_VERSION = 1;
@@ -71,6 +78,7 @@ export class HookEventHandler {
     private sessionRouter: SessionRouter,
     private watchAllSessionsRef?: { current: boolean },
   ) {
+    this.defaultProvider = provider;
     if (provider.protocolVersion !== HookEventHandler.SUPPORTED_PROTOCOL_VERSION) {
       console.warn(
         `[Pixel Agents] HookProvider "${provider.id}" reports protocolVersion=${provider.protocolVersion}, ` +
@@ -102,6 +110,20 @@ export class HookEventHandler {
     );
   }
 
+  /** Register the providers this handler routes by id (the default provider
+   *  may be included; it is matched by id like the others). */
+  setProviders(providers: readonly HookProvider[]): void {
+    this.extraProviders.clear();
+    for (const p of providers) {
+      if (p.id !== this.defaultProvider.id) this.extraProviders.set(p.id, p);
+    }
+  }
+
+  /** The provider that owns events posted under `providerId`. */
+  providerFor(providerId: string): HookProvider {
+    return this.extraProviders.get(providerId) ?? this.defaultProvider;
+  }
+
   /** Set callbacks for session lifecycle events (SessionStart/SessionEnd). */
   setLifecycleCallbacks(callbacks: SessionLifecycleCallbacks): void {
     this.lifecycleCallbacks = callbacks;
@@ -130,7 +152,25 @@ export class HookEventHandler {
    * @param providerId - Provider that sent the event ('claude', 'codex', etc.)
    * @param event - The hook event payload from the CLI tool
    */
-  handleEvent(_providerId: string, event: HookEvent): void {
+  handleEvent(providerId: string, event: HookEvent): void {
+    const provider = this.providerFor(providerId);
+    if (provider === this.provider) {
+      this.dispatchEvent(providerId, event);
+      return;
+    }
+    // Dispatch is synchronous: swap the active provider for the duration of
+    // this event so normalization, tool labels and team hooks all come from
+    // the provider that sent it, then restore it.
+    const previous = this.provider;
+    this.provider = provider;
+    try {
+      this.dispatchEvent(providerId, event);
+    } finally {
+      this.provider = previous;
+    }
+  }
+
+  private dispatchEvent(_providerId: string, event: HookEvent): void {
     if (this.provider.protocolVersion !== HookEventHandler.SUPPORTED_PROTOCOL_VERSION) {
       return; // version mismatch already logged in constructor
     }
@@ -276,7 +316,14 @@ export class HookEventHandler {
         pending.sessionId,
         pending.transcriptPath,
         pending.cwd,
+        this.provider.id,
       );
+      // Remember which CLI this agent is (UI badge, later routing).
+      for (const agent of this.agents.values()) {
+        if (agent.sessionId === pending.sessionId && !agent.providerId) {
+          agent.providerId = this.provider.id;
+        }
+      }
       // Re-process this event now that the agent exists
       this.handleEvent(_providerId, event);
       return;

@@ -213,6 +213,11 @@ components:
           type: string
         isExternal:
           type: boolean
+        providerId:
+          type: string
+          description: >-
+            The CLI the agent runs (hook provider id, e.g. claude, codex, agy).
+            Absent for agents the office cannot attribute (treated as claude).
         palette:
           type: integer
           description: Server-assigned character palette index.
