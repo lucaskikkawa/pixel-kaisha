@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 
 import { toMajorMinor } from './changelogData.js';
 import { CharactersView } from './characters/ui/CharactersView.js';
+import { CloudGhosts } from './cloud/CloudGhosts.js';
+import { useShortScreen } from './cloud/useShortScreen.js';
 import { AgentCardBar } from './components/AgentCardBar.js';
 import { BottomToolbar } from './components/BottomToolbar.js';
 import { ChangelogModal } from './components/ChangelogModal.js';
@@ -81,6 +83,12 @@ function App() {
     // In VS Code mode, the extension sends all state via postMessage.
     if (isBrowserRuntime && import.meta.env.DEV) {
       void import('./browserMock.js').then(({ dispatchMockMessages }) => dispatchMockMessages());
+      // Pixel Kaisha: `?mock=cloud` plays the B3 cloud-poller fixture.
+      if (window.location.search.includes('mock=cloud')) {
+        void import('./cloud/cloudMock.js').then(({ dispatchCloudMock }) =>
+          window.setTimeout(() => dispatchCloudMock(window.location.search), 300),
+        );
+      }
     }
   }, []);
 
@@ -165,6 +173,8 @@ function App() {
   // full-screen pages with the cards in a bottom bar. Desktop keeps the
   // right-docked drawer.
   const isMobile = useIsMobile();
+  // Cover screen: no room for the "Updated" toast over the office.
+  const shortScreen = useShortScreen();
   // Software keyboard: whether it is up (the key bar shows), and the height
   // to clamp the shell to so the terminal shrinks (and the PTY resizes)
   // instead of hiding its input line under the keys (iOS only — Android
@@ -757,7 +767,7 @@ function App() {
       <VersionIndicator
         currentVersion={extensionVersion}
         lastSeenVersion={lastSeenVersion}
-        hideUpdateNotice={officeReadOnly}
+        hideUpdateNotice={officeReadOnly || shortScreen}
         onDismiss={handleWhatsNewDismiss}
         onOpenChangelog={handleOpenChangelog}
       />
@@ -784,6 +794,8 @@ function App() {
           }
         />
       )}
+
+      {!isDebugMode && <CloudGhosts compact={isMobile} />}
 
       <ConnectionIndicator />
     </div>
