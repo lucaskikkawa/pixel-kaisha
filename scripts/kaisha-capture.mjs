@@ -39,8 +39,8 @@ const port = Number(arg('port', '5187'));
 
 export const VIEWPORTS = [
   { name: 'desktop-1280x800', width: 1280, height: 800, mobile: false },
-  { name: 'flip6-inner-412x915', width: 412, height: 915, mobile: true },
-  { name: 'flip6-cover-360x374', width: 360, height: 374, mobile: true },
+  { name: 'mobile-412x915', width: 412, height: 915, mobile: true },
+  { name: 'cover-360x374', width: 360, height: 374, mobile: true },
 ];
 
 function chromePath() {
