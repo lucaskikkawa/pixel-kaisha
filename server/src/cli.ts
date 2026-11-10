@@ -8,6 +8,7 @@
  * Each connecting WebSocket client receives the full state on webviewReady.
  */
 
+import * as os from 'os';
 import * as path from 'path';
 
 import { AgentRuntime } from './agentRuntime.js';
@@ -20,6 +21,7 @@ import {
 } from './assetReload.js';
 import { getCharacterProfiles, watchCharacterProfiles } from './characterProfilesPersistence.js';
 import type { AssetCache, ReloadAssetsSideEffect } from './clientMessageHandler.js';
+import { CloudPoller } from './cloudPoller.js';
 import {
   getHooksConsent,
   getHooksEnabled,
@@ -29,6 +31,7 @@ import {
 import {
   MAX_PORT,
   MIN_PORT,
+  PIXEL_AGENTS_DIR,
   PTY_HOST_SCRIPT,
   TERMINAL_DISABLED_BY_FLAG_REASON,
   WILDCARD_HOSTNAMES,
@@ -42,6 +45,7 @@ import {
   hookProviderById,
   hookProviders,
 } from './providers/index.js';
+import { codexCloudProvider } from './providers/poll/codexCloud/codexCloud.js';
 import { PixelAgentsServer } from './server.js';
 import {
   defaultPtyHostSocket,
@@ -518,6 +522,19 @@ async function main(): Promise<void> {
       }
     }
 
+    // Pixel Kaisha: cloud agents by polling (read-only), only while a client
+    // is connected. PIXEL_KAISHA_CLOUD=0 turns it off.
+    const cloudPoller =
+      process.env.PIXEL_KAISHA_CLOUD === '0'
+        ? undefined
+        : new CloudPoller({
+            provider: codexCloudProvider,
+            statePath: path.join(os.homedir(), PIXEL_AGENTS_DIR, 'cloud-state.json'),
+            subscriberCount: () => store.subscriberCount(),
+            broadcast: (message) => store.broadcast(message),
+          });
+    cloudPoller?.start();
+
     // Start scanning for external sessions (Claude running in user's terminal)
     const cwd = process.cwd();
     const dirs = claudeProvider.getSessionDirs?.(cwd);
@@ -545,6 +562,7 @@ async function main(): Promise<void> {
     // ── Graceful shutdown ──
     let shuttingDown = false;
     async function shutdown(): Promise<void> {
+      cloudPoller?.stop();
       if (shuttingDown) return;
       shuttingDown = true;
       console.log('\nShutting down...');

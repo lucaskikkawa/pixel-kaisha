@@ -1,0 +1,37 @@
+{
+  "tasks": [
+    {
+      "id": "task_e_example2",
+      "url": "https://chatgpt.com/codex/tasks/task_e_example2",
+      "title": "Add tests",
+      "status": "pending",
+      "updated_at": "2026-11-10T16:00:00Z",
+      "environment_id": null,
+      "environment_label": "calculator",
+      "summary": {
+        "files_changed": 0,
+        "lines_added": 0,
+        "lines_removed": 0
+      },
+      "is_review": false,
+      "attempt_total": 1
+    },
+    {
+      "id": "task_e_example3",
+      "url": "https://chatgpt.com/codex/tasks/task_e_example3",
+      "title": "Fix lint",
+      "status": "ready",
+      "updated_at": "2026-11-10T15:00:00Z",
+      "environment_id": null,
+      "environment_label": "calculator",
+      "summary": {
+        "files_changed": 0,
+        "lines_added": 0,
+        "lines_removed": 0
+      },
+      "is_review": false,
+      "attempt_total": 1
+    }
+  ],
+  "cursor": "cursor-page-2"
+}

@@ -108,6 +108,8 @@ components:
         - $ref: '#/components/schemas/RecentCharactersLoaded'
         - $ref: '#/components/schemas/CharacterSpritesLoaded'
         - $ref: '#/components/schemas/PetSpritesLoaded'
+        # Cloud agents (Pixel Kaisha)
+        - $ref: '#/components/schemas/CloudAgents'
         - $ref: '#/components/schemas/FloorTilesLoaded'
         - $ref: '#/components/schemas/WallTilesLoaded'
         - $ref: '#/components/schemas/CarpetTilesLoaded'
@@ -230,6 +232,49 @@ components:
             The seat the agent should take when it is free (a resumed
             conversation's agent returns to where it sat). Absent, the office
             picks one.
+
+    CloudAgents:
+      description: >-
+        Pixel Kaisha (docs/kaisha/protocol-cloud.md). Full current task list of
+        one cloud provider, read by polling. Sent after each poll and to each
+        client on connect. Privileged clients only (titles may hold user text).
+      type: object
+      additionalProperties: false
+      required: [type, providerId, providerName, available]
+      properties:
+        type:
+          const: cloudAgents
+        providerId:
+          type: string
+        providerName:
+          type: string
+        available:
+          type: boolean
+        reason:
+          type: string
+          description: Why the provider is unavailable (only when available is false).
+        tasks:
+          type: array
+          description: Omitted while unavailable (the UI keeps the last list, greyed out).
+          items:
+            $ref: '#/components/schemas/CloudAgentTask'
+
+    CloudAgentTask:
+      description: One cloud task (Pixel Kaisha). `status` is the vendor's raw value.
+      type: object
+      additionalProperties: false
+      required: [id, title, status]
+      properties:
+        id:
+          type: string
+        url:
+          type: string
+        title:
+          type: string
+        status:
+          type: string
+        updatedAt:
+          type: string
 
     AgentClosed:
       description: An agent has been removed from the office.

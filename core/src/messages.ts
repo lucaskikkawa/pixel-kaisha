@@ -31,6 +31,7 @@ export type ServerMessage =
   | RecentCharactersLoaded
   | CharacterSpritesLoaded
   | PetSpritesLoaded
+  | CloudAgents
   | FloorTilesLoaded
   | WallTilesLoaded
   | CarpetTilesLoaded
@@ -343,6 +344,23 @@ export interface PetSpriteFrameSet {
   walkUp: string[][][];
   idleUp: string[][][];
   walkRight: string[][][];
+}
+
+export interface CloudAgents {
+  type: 'cloudAgents';
+  providerId: string;
+  providerName: string;
+  available: boolean;
+  reason?: string;
+  tasks?: CloudAgentTask[];
+}
+
+export interface CloudAgentTask {
+  id: string;
+  url?: string;
+  title: string;
+  status: string;
+  updatedAt?: string;
 }
 
 export interface FloorTilesLoaded {

@@ -12,6 +12,7 @@ import {
   handleCharacterProfilesClientMessage,
   refusedSaveAnswer,
 } from './characterProfilesPersistence.js';
+import { latestCloudMessages } from './cloudPoller.js';
 import {
   getHooksConsent,
   getHooksEnabled,
@@ -755,6 +756,10 @@ function handleWebviewReady(send: WsSend, ctx: ClientMessageContext): void {
     externalAgents,
     providerIds,
   });
+  // Pixel Kaisha: the current cloud task lists, privileged clients only.
+  if (ctx.privileged) {
+    for (const message of latestCloudMessages()) send(message);
+  }
 
   // 7. Layout last (see step 3): flushes the webview's buffered existingAgents
   // into characters once seats are rebuilt.

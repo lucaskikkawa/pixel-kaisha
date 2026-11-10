@@ -34,6 +34,8 @@ interface StoredUsage extends ReportedUsage {
 export const PRIVILEGED_BROADCAST_TYPES: ReadonlySet<string> = new Set([
   'usageLimits',
   'usageBridgeStatus',
+  // Pixel Kaisha: cloud task titles can carry the user's own words.
+  'cloudAgents',
 ]);
 
 let cache: Record<string, StoredUsage> | null = null;
