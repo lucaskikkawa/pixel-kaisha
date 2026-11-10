@@ -9,8 +9,12 @@ Pixel Kaisha is a fork of [Pixel Agents](https://github.com/pixel-agents-hq/pixe
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-10
+
 ### Added
 
+- An Antigravity (`agy`) hook provider, with a fail-closed-safe hook script that never prints on `PreToolUse` ([#11](https://github.com/lucaskikkawa/pixel-kaisha/pull/11)).
+- A generic cloud poller and a read-only Codex Cloud adapter (`codex cloud list --json`), mapping task snapshots into office events ([#9](https://github.com/lucaskikkawa/pixel-kaisha/pull/9)).
 - Hook events routed by `providerId`, a Codex hook provider, project-scoped hook install, and `KAISHA_HOOKS_PROJECT_DIR` on `box-run.sh` ([#6](https://github.com/lucaskikkawa/pixel-kaisha/pull/6)).
 - `--only-dir` and `--ui-dist` on the capture script, so a real server can be recorded with only one directory in view ([#13](https://github.com/lucaskikkawa/pixel-kaisha/pull/13)).
 - `scripts/box-run.sh` to start, stop, and check the standalone office server, with smoke tests (`npm run test:scripts`) ([#3](https://github.com/lucaskikkawa/pixel-kaisha/pull/3)).
