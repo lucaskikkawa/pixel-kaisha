@@ -135,6 +135,12 @@ export class AgentStateStore {
 
   // ── Broadcast (replaces direct webview.postMessage in server/) ─
 
+  /** Number of connected subscribers (WebSocket clients, webviews). Pollers
+   *  use it to work only while someone is watching. */
+  subscriberCount(): number {
+    return this.emitter.listenerCount('broadcast');
+  }
+
   broadcast(message: Record<string, unknown>): void {
     debugLogBroadcast(message);
     this.emitter.emit('broadcast', message);

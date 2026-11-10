@@ -347,6 +347,33 @@ describe('clientMessageHandler: areas + carpet wire ordering', () => {
       expect(existing.providerIds).toEqual({ 2: 'codex' });
     });
 
+    it('webviewReady re-sends the last cloudAgents snapshot (Pixel Kaisha)', async () => {
+      const { CloudPoller } = await import('../src/cloudPoller.js');
+      const poller = new CloudPoller({
+        provider: {
+          kind: 'poll',
+          id: 'test-cloud',
+          displayName: 'Test Cloud',
+          intervalMs: 1000,
+          isConfigured: async () => true,
+          listTasks: async () => [{ id: 't1', title: 'x', status: 'done', rawStatus: 'ready' }],
+        },
+        statePath: path.join(os.tmpdir(), `kaisha-cloud-${process.pid}.json`),
+        subscriberCount: () => 1,
+        broadcast: () => {},
+      });
+      await poller.pollOnce();
+
+      handleClientMessage({ type: 'webviewReady' }, (m) => sent.push(m), ctx);
+
+      expect(
+        sent.find((m) => m.type === 'cloudAgents' && m.providerId === 'test-cloud'),
+      ).toMatchObject({
+        available: true,
+        tasks: [{ id: 't1', status: 'ready' }],
+      });
+    });
+
     it('emits layoutLoaded after existingAgents so buffered agents materialize', () => {
       // The webview buffers agents from existingAgents and only materializes
       // them on the next layoutLoaded. If layout arrives first, a client

@@ -1,0 +1,21 @@
+{
+  "tasks": [
+    {
+      "id": "task_e_example1",
+      "url": "https://chatgpt.com/codex/tasks/task_e_example1",
+      "title": "Summarize the repository",
+      "status": "ready",
+      "updated_at": "2026-06-29T14:29:19.349145889Z",
+      "environment_id": null,
+      "environment_label": "calculator",
+      "summary": {
+        "files_changed": 0,
+        "lines_added": 0,
+        "lines_removed": 0
+      },
+      "is_review": false,
+      "attempt_total": 1
+    }
+  ],
+  "cursor": null
+}

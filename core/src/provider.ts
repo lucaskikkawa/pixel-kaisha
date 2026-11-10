@@ -227,3 +227,43 @@ export interface HookProvider {
 
 // TODO(provider type taxonomy): FileProvider (polling-only CLIs) and StreamProvider
 // (push-based external services) will be added alongside the first real second provider
+
+// ── Poll-based Provider (cloud task queues; Pixel Kaisha) ─────
+
+/** Normalized state of a cloud task. `unknown` = a status this version does
+ *  not recognise (the CLI is experimental); shown neutrally, never an error. */
+export type CloudTaskStatus = 'active' | 'done' | 'failed' | 'unknown';
+
+/** One task in a cloud agent's queue, as a poll provider reports it. */
+export interface CloudTask {
+  /** Provider-scoped task id. */
+  id: string;
+  title: string;
+  status: CloudTaskStatus;
+  /** The provider's own status string (for labels/diagnostics). */
+  rawStatus: string;
+  /** Page of the task in the provider's web UI (the ghost opens it). */
+  url?: string;
+  /** ISO-8601 time of the task's last update, when known. */
+  updatedAt?: string;
+  /** Environment / repository label, when known. */
+  environment?: string;
+}
+
+/**
+ * A provider read by polling (e.g. Codex Cloud via `codex cloud list --json`).
+ * Read-only: it lists tasks, it never creates or changes them.
+ */
+export interface PollProvider {
+  readonly kind: 'poll';
+  readonly id: string;
+  readonly displayName: string;
+  /** Poll interval while a client is connected, ms. */
+  readonly intervalMs: number;
+  /** Whether the provider can be polled at all (CLI present). A false here
+   *  shows the provider as unavailable without trying. */
+  isConfigured(): Promise<boolean>;
+  /** All current tasks. Rejects when the provider is unavailable (signed out,
+   *  offline, CLI error); the poller backs off and reports "unavailable". */
+  listTasks(): Promise<CloudTask[]>;
+}
