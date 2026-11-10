@@ -11,6 +11,9 @@ Pixel Kaisha is a fork of [Pixel Agents](https://github.com/pixel-agents-hq/pixe
 
 ### Added
 
+- `scripts/box-run.sh` to start, stop, and check the standalone office server, with smoke tests (`npm run test:scripts`) ([#3](https://github.com/lucaskikkawa/pixel-kaisha/pull/3)).
+- Playwright capture script (`npm run capture:kaisha`) for v0.1 screenshots and a short video in desktop, mobile, and cover-screen viewports ([#7](https://github.com/lucaskikkawa/pixel-kaisha/pull/7)).
+- Pixel Kaisha PWA branding (name, icons, manifest) and a compact layout for short cover-screen viewports ([#5](https://github.com/lucaskikkawa/pixel-kaisha/pull/5)).
 - Codex Cloud ghost characters in the office UI, engine badges on local agents, and the additive `cloudAgents` WebSocket message documented in `docs/kaisha/protocol-cloud.md` ([#4](https://github.com/lucaskikkawa/pixel-kaisha/pull/4)).
 - Research notes from the v0.1 study in `docs/research/`: fork internals, Claude / Codex / Antigravity (`agy`) hook formats, Codex Cloud `list --json` output, and v0.1 recommendations ([#1](https://github.com/lucaskikkawa/pixel-kaisha/pull/1)).
 - Short pull request template for this fork.
