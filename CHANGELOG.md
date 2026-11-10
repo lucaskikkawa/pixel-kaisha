@@ -11,6 +11,7 @@ Pixel Kaisha is a fork of [Pixel Agents](https://github.com/pixel-agents-hq/pixe
 
 ### Added
 
+- Codex Cloud ghost characters in the office UI, engine badges on local agents, and the additive `cloudAgents` WebSocket message documented in `docs/kaisha/protocol-cloud.md` ([#4](https://github.com/lucaskikkawa/pixel-kaisha/pull/4)).
 - Research notes from the v0.1 study in `docs/research/`: fork internals, Claude / Codex / Antigravity (`agy`) hook formats, Codex Cloud `list --json` output, and v0.1 recommendations ([#1](https://github.com/lucaskikkawa/pixel-kaisha/pull/1)).
 - Short pull request template for this fork.
 
