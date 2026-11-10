@@ -56,6 +56,7 @@ import { PtySessionManager } from './terminal/ptySessionManager.js';
 import { RemotePtySessions, startPtyHostProcess } from './terminal/remotePtySessions.js';
 import { reattachTerminalAgents } from './terminal/standaloneAgentLauncher.js';
 import type { TerminalSessions } from './terminal/terminalSessions.js';
+import { registerTrackedCwd } from './trackedSessionCwds.js';
 import { isLoopbackHost, normalizeHostname } from './wsAuth.js';
 
 // ── Argument parsing ──────────────────────────────────────────
@@ -502,6 +503,9 @@ async function main(): Promise<void> {
     }
 
     const scopedDir = hooksProjectDir();
+    // Hooks only fire for sessions started in scopedDir: adopt them even with
+    // Watch All Sessions off (matched by the session's cwd).
+    if (scopedDir) registerTrackedCwd(scopedDir);
     console.log(
       scopedDir
         ? `[Pixel Kaisha] Hooks are project-scoped: installers write only under ${scopedDir}`

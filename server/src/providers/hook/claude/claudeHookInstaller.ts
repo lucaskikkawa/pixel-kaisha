@@ -10,6 +10,7 @@ import {
   type ClaudeSettings,
   mutateClaudeSettings,
   readClaudeSettings,
+  restoreScopedClaudeSettings,
 } from './claudeSettingsFile.js';
 import { CLAUDE_HOOK_EVENTS, CLAUDE_HOOK_SCRIPT_NAME } from './constants.js';
 
@@ -250,6 +251,11 @@ export async function uninstallHooks(): Promise<void> {
   }
   if (wrote) {
     console.log('[Pixel Agents] Hooks removed from ~/.claude/settings.json');
+  }
+  // Pixel Kaisha: project-scoped installs restore the pre-install file.
+  const restored = restoreScopedClaudeSettings();
+  if (restored === 'deleted' || restored === 'restored') {
+    console.log(`[Pixel Kaisha] Project Claude settings ${restored} (pre-install state)`);
   }
 }
 

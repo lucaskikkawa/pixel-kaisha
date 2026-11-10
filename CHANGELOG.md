@@ -9,6 +9,11 @@ Pixel Kaisha is a fork of [Pixel Agents](https://github.com/pixel-agents-hq/pixe
 
 ## [Unreleased]
 
+### Fixed
+
+- Sessions started in the hooks project dir (`PIXEL_KAISHA_HOOKS_PROJECT_DIR`) are adopted with Watch All Sessions off, matched by the session's cwd for Claude, Codex, and Antigravity.
+- A project-scoped Claude hook install backs up `.claude/settings.json` (or records that it was absent), and uninstall restores it.
+
 ## [0.1.0] - 2026-11-10
 
 ### Added
