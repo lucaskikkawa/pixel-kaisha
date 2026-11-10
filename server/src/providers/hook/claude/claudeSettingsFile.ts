@@ -12,6 +12,7 @@ import * as path from 'path';
 
 import { isRecord } from '../../../serverConfig.js';
 import { hooksProjectDir } from '../shared/hooksScope.js';
+import { ABSENT_MARKER } from '../shared/jsonSettingsFile.js';
 import { type ClaudeHookEntry, hooksHoldOnlyOurs } from './claudeHookEntries.js';
 import {
   SETTINGS_BACKUP_SUFFIX,
@@ -172,6 +173,59 @@ function backupClaudeSettingsOnce(settingsPath: string): void {
   }
 }
 
+/** Pixel Kaisha: write the "original absent" marker as the backup, once. A
+ *  backup already there (marker or real copy) is never overwritten. */
+function markClaudeSettingsAbsentOnce(settingsPath: string): void {
+  const backupPath = settingsPath + SETTINGS_BACKUP_SUFFIX;
+  if (fs.existsSync(backupPath)) return;
+  fs.mkdirSync(path.dirname(settingsPath), { recursive: true, mode: 0o700 });
+  fs.writeFileSync(backupPath, ABSENT_MARKER, { mode: SETTINGS_FRESH_FILE_MODE, flag: 'wx' });
+}
+
+/**
+ * Pixel Kaisha, project-scoped only: after an uninstall, put the project's
+ * settings.json back the way it was before we first touched it.
+ *
+ * - backup is the "absent" marker and nothing but an empty shell is left:
+ *   delete settings.json and the marker;
+ * - backup is a real copy and what is left equals it: restore the original
+ *   bytes and drop the backup;
+ * - anything else (user content added since, status line still installed):
+ *   leave both files as they are.
+ *
+ * User-level (~/.claude) behaviour is unchanged: the upstream backup stays a
+ * permanent safety net. Returns what it did, for logs and tests.
+ */
+export function restoreScopedClaudeSettings(): 'deleted' | 'restored' | 'kept' | 'none' {
+  if (!hooksProjectDir()) return 'none';
+  const settingsPath = getClaudeSettingsPath();
+  const backupPath = settingsPath + SETTINGS_BACKUP_SUFFIX;
+  if (!isRegularFile(backupPath)) return 'none';
+  const backupRaw = fs.readFileSync(backupPath, 'utf-8');
+  const current = fs.existsSync(settingsPath) ? readClaudeSettings() : null;
+  if (backupRaw === ABSENT_MARKER) {
+    const emptyShell =
+      current === null ||
+      Object.keys(current).every(
+        (k) => k === 'hooks' && isRecord(current.hooks) && Object.keys(current.hooks).length === 0,
+      );
+    if (!emptyShell) return 'kept';
+    removeIfPresent(settingsPath);
+    fs.unlinkSync(backupPath);
+    return 'deleted';
+  }
+  let original: unknown;
+  try {
+    original = JSON.parse(backupRaw);
+  } catch {
+    return 'kept';
+  }
+  if (current === null || JSON.stringify(original) !== JSON.stringify(current)) return 'kept';
+  fs.copyFileSync(backupPath, settingsPath);
+  fs.unlinkSync(backupPath);
+  return 'restored';
+}
+
 /** Whether the path resolves (through symlinks) to a regular file. */
 function isRegularFile(filePath: string): boolean {
   try {
@@ -228,7 +282,14 @@ function writeClaudeSettings(settings: ClaudeSettings, expectedRaw: string | nul
   // redundant: the object mutateClaudeSettings parsed from it has already
   // been mutated by the callback — it now holds what we are ABOUT to write,
   // and this decision must be about what we are REPLACING.
-  if (expectedRaw === null || !settingsHoldOnlyOurOutput(parseClaudeSettings(expectedRaw))) {
+  const replacingOnlyOurs =
+    expectedRaw !== null && settingsHoldOnlyOurOutput(parseClaudeSettings(expectedRaw));
+  if (hooksProjectDir() && (expectedRaw === null || replacingOnlyOurs)) {
+    // Pixel Kaisha, project-scoped: nothing of the user's to copy, so record
+    // that the original was absent (uninstall then deletes the file again).
+    markClaudeSettingsAbsentOnce(settingsPath);
+  }
+  if (expectedRaw === null || !replacingOnlyOurs) {
     backupClaudeSettingsOnce(settingsPath);
   }
 

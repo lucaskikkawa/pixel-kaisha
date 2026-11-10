@@ -44,6 +44,7 @@ import { PathSet, pathsMatch } from './pathKey.js';
 import { SessionRouter } from './sessionRouter.js';
 import { SubagentWatch } from './subagentWatch.js';
 import { cancelPermissionTimer, cancelWaitingTimer } from './timerManager.js';
+import { isTrackedCwd } from './trackedSessionCwds.js';
 import {
   endBackgroundSpawn,
   setBackgroundAgentCompletedCallback,
@@ -203,7 +204,12 @@ export class AgentRuntime {
             }
           }
         }
-        if (!isTrackedProjectDir(projectDir) && !this.watchAllSessions.current) {
+        // Pixel Kaisha: also match by the session's cwd (the hooks project dir
+        // is registered in trackedSessionCwds), not only dirname(transcript).
+        const tracked =
+          isTrackedProjectDir(projectDir) ||
+          (!!cwd && (isTrackedCwd(cwd) || isTrackedProjectDir(cwd)));
+        if (!tracked && !this.watchAllSessions.current) {
           console.log(
             `[Pixel Agents] Hook: external session ${sessionId.slice(0, 8)}... not adopted ` +
               `(project untracked, Watch All Sessions off)`,
