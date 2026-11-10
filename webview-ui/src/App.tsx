@@ -703,7 +703,9 @@ function App() {
       {hooksEnabled && claudeHooksInstalled && !hooksInfoShown && !hooksTooltipDismissed && (
         <Tooltip
           title="Instant Detection Active"
-          position="top-right"
+          // Phones: the top-right corner holds the ☁ cloud cards, so the
+          // first-run tooltip goes bottom-left instead of covering them.
+          position={isMobile ? 'bottom-left' : 'top-right'}
           onDismiss={() => {
             setHooksTooltipDismissed(true);
             transport.send({ type: 'setHooksInfoShown' });

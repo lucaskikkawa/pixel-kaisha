@@ -7,7 +7,7 @@ import {
 } from '../constants.js';
 import type { CloudTask } from './cloudStore.js';
 import { cloudProviders, safeTaskUrl, subscribeCloud } from './cloudStore.js';
-import { shortTitle } from './cloudSummary.js';
+import { CHIP_TITLE_MAX, shortTitle } from './cloudSummary.js';
 import { CLOUD_STATUS_VIEW } from './cloudView.js';
 import { useShortScreen } from './useShortScreen.js';
 
@@ -64,29 +64,37 @@ function openTask(task: CloudTask) {
   if (url) window.open(url, '_blank', 'noopener,noreferrer');
 }
 
-/** Cover screen: one-line chip (ghost + status + short title), tap opens. */
+/** Short screen (~360×374): compact chip — ghost, status and the title
+ *  wrapped over up to two lines; the full title stays in the tooltip and the
+ *  accessible name. Tap opens the task. */
 function GhostChip({ task, providerName }: { task: CloudTask; providerName: string }) {
   const view = CLOUD_STATUS_VIEW[task.status];
+  const fullLabel = `${providerName}: ${task.title} (${task.rawStatus || view.label})`;
   return (
     <button
       type="button"
       onClick={() => openTask(task)}
-      title={`${providerName}: ${task.title} (${task.rawStatus || view.label})`}
+      title={fullLabel}
+      aria-label={fullLabel}
       data-testid="cloud-ghost"
       data-status={task.status}
-      className="pixel-panel flex items-center gap-3 px-3 py-0 cursor-pointer text-2xs leading-none whitespace-nowrap"
-      style={{ opacity: task.status === 'unavailable' ? 0.5 : 1 }}
+      className="pixel-panel flex items-center gap-3 px-3 py-1 cursor-pointer text-2xs leading-none text-left"
+      style={{ opacity: task.status === 'unavailable' ? 0.5 : 1, maxWidth: '100%' }}
     >
       <span
-        className={task.status === 'active' ? 'cloud-ghost-float' : undefined}
+        className={`shrink-0 ${task.status === 'active' ? 'cloud-ghost-float' : ''}`}
         style={{ opacity: 0.6 }}
       >
         <GhostSprite color={view.color} size={16} />
       </span>
-      <span style={{ color: view.color }} data-testid="cloud-status">
-        {view.label}
+      <span className="flex flex-col gap-1 min-w-0">
+        <span style={{ color: view.color }} data-testid="cloud-status">
+          {view.label}
+        </span>
+        <span className="cloud-chip-title" data-testid="cloud-title">
+          {shortTitle(task.title, CHIP_TITLE_MAX)}
+        </span>
       </span>
-      <span>{shortTitle(task.title, 14)}</span>
     </button>
   );
 }
