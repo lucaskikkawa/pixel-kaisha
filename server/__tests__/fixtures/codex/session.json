@@ -1,0 +1,88 @@
+[
+  {
+    "session_id": "0000aaaa-1111-2222-3333-444455556666",
+    "cwd": "/sandbox/calc",
+    "transcript_path": "/home/user/.codex/sessions/2026/11/10/rollout-example.jsonl",
+    "model": "example-model",
+    "hook_event_name": "SessionStart",
+    "source": "startup"
+  },
+  {
+    "session_id": "0000aaaa-1111-2222-3333-444455556666",
+    "cwd": "/sandbox/calc",
+    "transcript_path": "/home/user/.codex/sessions/2026/11/10/rollout-example.jsonl",
+    "model": "example-model",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_use_id": "call_001",
+    "tool_input": {
+      "command": "printf 'hi' > calc.txt"
+    }
+  },
+  {
+    "session_id": "0000aaaa-1111-2222-3333-444455556666",
+    "cwd": "/sandbox/calc",
+    "transcript_path": "/home/user/.codex/sessions/2026/11/10/rollout-example.jsonl",
+    "model": "example-model",
+    "hook_event_name": "PermissionRequest",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "rm -rf build"
+    }
+  },
+  {
+    "session_id": "0000aaaa-1111-2222-3333-444455556666",
+    "cwd": "/sandbox/calc",
+    "transcript_path": "/home/user/.codex/sessions/2026/11/10/rollout-example.jsonl",
+    "model": "example-model",
+    "hook_event_name": "PostToolUse",
+    "tool_name": "Bash",
+    "tool_use_id": "call_001",
+    "tool_input": {
+      "command": "printf 'hi' > calc.txt"
+    },
+    "tool_response": {
+      "exit_code": 0
+    }
+  },
+  {
+    "session_id": "0000aaaa-1111-2222-3333-444455556666",
+    "cwd": "/sandbox/calc",
+    "transcript_path": "/home/user/.codex/sessions/2026/11/10/rollout-example.jsonl",
+    "model": "example-model",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "apply_patch",
+    "tool_use_id": "call_002",
+    "tool_input": {
+      "input": "*** Begin Patch"
+    }
+  },
+  {
+    "session_id": "0000aaaa-1111-2222-3333-444455556666",
+    "cwd": "/sandbox/calc",
+    "transcript_path": "/home/user/.codex/sessions/2026/11/10/rollout-example.jsonl",
+    "model": "example-model",
+    "hook_event_name": "PostToolUse",
+    "tool_name": "apply_patch",
+    "tool_use_id": "call_002",
+    "tool_input": {},
+    "tool_response": {}
+  },
+  {
+    "session_id": "0000aaaa-1111-2222-3333-444455556666",
+    "cwd": "/sandbox/calc",
+    "transcript_path": "/home/user/.codex/sessions/2026/11/10/rollout-example.jsonl",
+    "model": "example-model",
+    "hook_event_name": "Stop",
+    "stop_hook_active": false,
+    "last_assistant_message": "done"
+  },
+  {
+    "session_id": "0000aaaa-1111-2222-3333-444455556666",
+    "cwd": "/sandbox/calc",
+    "transcript_path": "/home/user/.codex/sessions/2026/11/10/rollout-example.jsonl",
+    "model": "example-model",
+    "hook_event_name": "SessionEnd",
+    "reason": "exit"
+  }
+]

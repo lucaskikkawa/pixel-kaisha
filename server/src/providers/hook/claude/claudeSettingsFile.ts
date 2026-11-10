@@ -11,6 +11,7 @@ import * as os from 'os';
 import * as path from 'path';
 
 import { isRecord } from '../../../serverConfig.js';
+import { hooksProjectDir } from '../shared/hooksScope.js';
 import { type ClaudeHookEntry, hooksHoldOnlyOurs } from './claudeHookEntries.js';
 import {
   SETTINGS_BACKUP_SUFFIX,
@@ -30,6 +31,9 @@ export interface ClaudeSettings {
 
 /** Returns the absolute path to ~/.claude/settings.json. */
 function getClaudeSettingsPath(): string {
+  // Pixel Kaisha: project-scoped hooks (see hooksScope.ts).
+  const projectDir = hooksProjectDir();
+  if (projectDir) return path.join(projectDir, '.claude', 'settings.json');
   return path.join(os.homedir(), '.claude', 'settings.json');
 }
 

@@ -11,6 +11,7 @@ export function agentCreatedMessage(id: number, agent: AgentState): Record<strin
     id,
     directoryName: agent.directoryName,
     isExternal: agent.isExternal || undefined,
+    providerId: agent.providerId,
     isTeammate: agent.leadAgentId !== undefined || undefined,
     teammateName: agent.agentName,
     parentAgentId: agent.leadAgentId,
