@@ -9,10 +9,17 @@ Pixel Kaisha is a fork of [Pixel Agents](https://github.com/pixel-agents-hq/pixe
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-10
+
 ### Fixed
 
-- Sessions started in the hooks project dir (`PIXEL_KAISHA_HOOKS_PROJECT_DIR`) are adopted with Watch All Sessions off, matched by the session's cwd for Claude, Codex, and Antigravity.
-- A project-scoped Claude hook install backs up `.claude/settings.json` (or records that it was absent), and uninstall restores it.
+- Sessions started in the hooks project dir (`PIXEL_KAISHA_HOOKS_PROJECT_DIR`) are adopted with Watch All Sessions off, matched by the session's cwd for Claude, Codex, and Antigravity ([#17](https://github.com/lucaskikkawa/pixel-kaisha/pull/17)).
+- A project-scoped Claude hook install backs up `.claude/settings.json` (or records that it was absent), and uninstall restores it ([#17](https://github.com/lucaskikkawa/pixel-kaisha/pull/17)).
+- On phones, the first-run "Instant Detection Active" tooltip no longer covers the cloud cards; short-screen chips wrap the task title over up to two lines instead of cutting it short ([#16](https://github.com/lucaskikkawa/pixel-kaisha/pull/16)).
+
+### Known issues
+
+- An Antigravity (`agy`) session does not close at the end: the hook has no `SessionEnd`, so after `Stop` the character stays in the office in a waiting state. Out of scope for this release.
 
 ## [0.1.0] - 2026-11-10
 
