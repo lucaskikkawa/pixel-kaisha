@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 
-/** A cover-screen-sized viewport (Z Flip 6 cover ≈ 360×374 CSS px). */
+/** A short viewport, e.g. a 360×374 CSS px cover screen. */
 export const SHORT_SCREEN_QUERY = '(max-height: 480px)';
 
 function subscribe(cb: () => void): () => void {
