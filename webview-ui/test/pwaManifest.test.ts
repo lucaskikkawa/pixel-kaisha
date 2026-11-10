@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 import { PNG } from 'pngjs';
 import { test } from 'vitest';
 
-import { shortTitle } from '../src/cloud/cloudSummary.js';
+import { CHIP_TITLE_MAX, shortTitle } from '../src/cloud/cloudSummary.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const publicDir = path.join(root, 'public');
@@ -64,4 +64,11 @@ test('index.html links the manifest and carries the Pixel Kaisha title', () => {
 test('shortTitle trims long cloud task titles for the cover screen', () => {
   assert.equal(shortTitle('Calculadora', 14), 'Calculadora');
   assert.equal(shortTitle('Calculadora simples', 14), 'Calculadora s…');
+});
+
+test('short-screen chips keep a real task title whole (it wraps instead of cutting)', () => {
+  // QA v0.1.0: "Resumir conteúdo do repositório" was cut to "Resumir conte…" at 360×374.
+  const title = 'Resumir conteúdo do repositório';
+  assert.equal(shortTitle(title, CHIP_TITLE_MAX), title);
+  assert.ok(shortTitle('x'.repeat(80), CHIP_TITLE_MAX).length <= CHIP_TITLE_MAX);
 });

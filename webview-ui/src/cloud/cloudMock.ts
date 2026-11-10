@@ -22,7 +22,12 @@ export function dispatchCloudMock(search: string): () => void {
     alwaysShowLabels: true,
     extensionVersion: '1.6.0',
     lastSeenVersion: '1.6.0',
+    // First paint of a fresh install: the "Instant Detection Active" tooltip
+    // shows (QA v0.1.0 found it covering the ☁ cards on phones).
+    hooksEnabled: true,
+    hooksInfoShown: false,
   });
+  dispatch({ type: 'hooksStatus', providerId: 'claude', installed: true });
   for (const a of MOCK_LOCAL_AGENTS) {
     dispatch({
       type: 'agentCreated',
