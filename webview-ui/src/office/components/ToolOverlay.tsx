@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 
 import { agentEngineBadge } from '../../cloud/engineBadge.js';
+import { useShortScreen } from '../../cloud/useShortScreen.js';
 import { Button } from '../../components/ui/Button.js';
 import { PixelIcon } from '../../components/ui/PixelIcon.js';
 import {
@@ -114,6 +115,8 @@ export function ToolOverlay({
   onCloseAgent,
   alwaysShowOverlay,
 }: ToolOverlayProps) {
+  // Cover screen (Z Flip 6, ~360×374): compact labels — smaller text, no directory line.
+  const short = useShortScreen();
   const [, setTick] = useState(0);
   useEffect(() => {
     let rafId = 0;
@@ -344,13 +347,13 @@ export function ToolOverlay({
                   <span
                     className="overflow-hidden text-ellipsis block leading-none"
                     style={{
-                      fontSize: isSub ? '20px' : '22px',
+                      fontSize: short ? '18px' : isSub ? '20px' : '22px',
                       fontStyle: isSub ? 'italic' : undefined,
                     }}
                   >
                     {activityText}
                   </span>
-                  {ch.directoryName && (
+                  {ch.directoryName && !short && (
                     <span className="text-2xs leading-none overflow-hidden text-ellipsis block">
                       {ch.directoryName}
                     </span>
