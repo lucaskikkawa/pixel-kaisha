@@ -115,7 +115,7 @@ export function ToolOverlay({
   onCloseAgent,
   alwaysShowOverlay,
 }: ToolOverlayProps) {
-  // Cover screen (Z Flip 6, ~360×374): compact labels — smaller text, no directory line.
+  // Short screen (~360×374): compact labels — smaller text, no directory line.
   const short = useShortScreen();
   const [, setTick] = useState(0);
   useEffect(() => {
