@@ -1,5 +1,23 @@
 # Changelog
 
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+Pixel Kaisha is a fork of [Pixel Agents](https://github.com/pixel-agents-hq/pixel-agents). Entries under **[Unreleased]** are changes in this fork. The version history below is preserved from upstream.
+
+## [Unreleased]
+
+### Added
+
+- Research notes from the v0.1 study in `docs/research/`: fork internals, Claude / Codex / Antigravity (`agy`) hook formats, Codex Cloud `list --json` output, and v0.1 recommendations ([#1](https://github.com/lucaskikkawa/pixel-kaisha/pull/1)).
+- Short pull request template for this fork.
+
+### Changed
+
+- README rewritten for Pixel Kaisha (what the project is, the name 会社, planned engines, architecture, and roadmap), with the original upstream README kept at `docs/UPSTREAM_README.md`.
+
 ## v1.6.0
 
 ### Features
