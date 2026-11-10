@@ -709,3 +709,14 @@
   display: inline-block;
   animation: cloud-ghost-float 1.6s steps(4) infinite;
 }
+
+/* Pixel Kaisha: short-screen cloud chip titles wrap over two lines. */
+.cloud-chip-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  line-height: 1.1;
+}
