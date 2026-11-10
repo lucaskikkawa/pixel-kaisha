@@ -124,6 +124,7 @@ export interface ExistingAgents {
   agentMeta: Record<string, AgentSeatMeta>;
   directoryNames: Record<string, string>;
   externalAgents: Record<string, boolean>;
+  providerIds?: Record<string, string>;
 }
 
 export interface AgentSeatMeta {

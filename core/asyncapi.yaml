@@ -282,6 +282,13 @@ components:
           description: Map of agent ID (string) to external flag.
           additionalProperties:
             type: boolean
+        providerIds:
+          type: object
+          description: >-
+            Pixel Kaisha. Map of agent ID (string) to the CLI it runs (claude,
+            codex, agy). Missing entries mean claude.
+          additionalProperties:
+            type: string
 
     AgentStatus:
       description: Active vs waiting state for an agent (drives character animation).

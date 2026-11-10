@@ -335,6 +335,18 @@ describe('clientMessageHandler: areas + carpet wire ordering', () => {
       expect(mappings.mappings).toEqual({ frontend: ['Engineering'] });
     });
 
+    it('existingAgents carries providerIds for agents of other CLIs (Pixel Kaisha)', () => {
+      store.set(1, createTestAgent({ id: 1 }));
+      store.set(2, createTestAgent({ id: 2, providerId: 'codex' }));
+
+      handleClientMessage({ type: 'webviewReady' }, (m) => sent.push(m), ctx);
+
+      const existing = sent.find((m) => m.type === 'existingAgents') as {
+        providerIds?: Record<number, string>;
+      };
+      expect(existing.providerIds).toEqual({ 2: 'codex' });
+    });
+
     it('emits layoutLoaded after existingAgents so buffered agents materialize', () => {
       // The webview buffers agents from existingAgents and only materializes
       // them on the next layoutLoaded. If layout arrives first, a client
