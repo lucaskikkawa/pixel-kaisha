@@ -21,6 +21,7 @@ export const REQUIRED_PACKAGE_FILES = [
   'dist/extension.js',
   'dist/hooks/claude-hook.js',
   'dist/hooks/codex-hook.js',
+  'dist/hooks/agy-hook.js',
   'dist/webview/index.html',
   'icon.png',
   'package.json',
