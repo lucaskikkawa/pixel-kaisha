@@ -1,4 +1,5 @@
 import type { AgentStateStore } from './agentStateStore.js';
+import { syncAgentSummary } from './agentSummary.js';
 import { PERMISSION_TIMER_DELAY_MS } from './constants.js';
 import { hasPromotedBackgroundAgent } from './teamUtils.js';
 import type { AgentState } from './types.js';
@@ -57,6 +58,9 @@ export function clearAgentActivity(
     }
   }
   agents.broadcast({ type: 'agentStatus', id: agentId, status: 'active' });
+  // Balloon summary (B2.1): foreground tools are gone.
+  agent.hookToolStatus = undefined;
+  syncAgentSummary(agentId, agent, agents);
 }
 
 export function cancelWaitingTimer(

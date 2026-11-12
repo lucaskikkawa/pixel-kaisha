@@ -5,6 +5,7 @@ import { resendAgentActivity } from './agentActivityResend.js';
 import { buildAgentDiagnostics } from './agentDiagnostics.js';
 import type { AgentRuntime } from './agentRuntime.js';
 import type { AgentStateStore } from './agentStateStore.js';
+import { existingAgentSummaries } from './agentSummary.js';
 import type { LoadedAssets, LoadedCharacterSprites, LoadedPetSprites } from './assetLoader.js';
 import { cardOrderMessage, saveCardOrder } from './cardOrder.js';
 import {
@@ -746,6 +747,8 @@ function handleWebviewReady(send: WsSend, ctx: ClientMessageContext): void {
       seatId: persisted?.seatId,
     };
   }
+  // Balloon summaries (B2.1) may quote the user: privileged clients only.
+  const summaries = ctx.privileged ? existingAgentSummaries(store) : {};
   // Before the agents, so their cards appear in order rather than reshuffle.
   send(cardOrderMessage(adapter));
   send({
@@ -755,6 +758,8 @@ function handleWebviewReady(send: WsSend, ctx: ClientMessageContext): void {
     directoryNames,
     externalAgents,
     providerIds,
+    // Balloon summaries (B2.1), only for agents that have one.
+    ...(Object.keys(summaries).length > 0 ? { summaries } : {}),
   });
   // Pixel Kaisha: the current cloud task lists, privileged clients only.
   if (ctx.privileged) {

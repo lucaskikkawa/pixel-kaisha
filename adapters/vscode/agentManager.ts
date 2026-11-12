@@ -13,6 +13,7 @@ import {
 } from '../../server/src/agentPersistence.js';
 import { createAgentState } from '../../server/src/agentState.js';
 import { AgentStateStore } from '../../server/src/agentStateStore.js';
+import { existingAgentSummaries } from '../../server/src/agentSummary.js';
 import { JSONL_POLL_INTERVAL_MS } from '../../server/src/constants.js';
 import { clearContextUsage } from '../../server/src/contextUsage.js';
 import { directoryAt } from '../../server/src/directories.js';
@@ -518,6 +519,7 @@ export function sendExistingAgents(
       externalAgents[id] = true;
     }
   }
+  const summaries = existingAgentSummaries(agents);
   console.log(
     `[Pixel Agents] sendExistingAgents: agents=${JSON.stringify(agentIds)}, meta=${JSON.stringify(agentMeta)}`,
   );
@@ -528,6 +530,8 @@ export function sendExistingAgents(
     agentMeta,
     directoryNames,
     externalAgents,
+    // Balloon summaries (B2.1), only for agents that have one.
+    ...(Object.keys(summaries).length > 0 ? { summaries } : {}),
   });
   // Note: sendCurrentAgentStatuses is called separately AFTER layoutLoaded
   // so that agentStatus/agentToolStart messages arrive after characters are created.
