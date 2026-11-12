@@ -68,6 +68,7 @@ export type ClientMessage =
   | SaveAgentSeats
   | SaveLayout
   | SaveCharacterProfiles
+  | SetCharacterDefaultTool
   | SetSoundEnabled
   | SetLastSeenVersion
   | SetAlwaysShowLabels
@@ -360,6 +361,7 @@ export interface CharacterProfile {
   edits?: Record<string, CharacterPixelEdits>;
   v?: number;
   memoryPath?: string;
+  defaultTool?: string;
 }
 
 export interface CharacterColor {
@@ -659,6 +661,12 @@ export interface SaveCharacterProfiles {
   profiles: CharacterProfile[];
   saveId: string;
   items?: WardrobeItem[];
+}
+
+export interface SetCharacterDefaultTool {
+  type: 'setCharacterDefaultTool';
+  profileId: string;
+  providerId: 'claude' | 'codex' | 'agy';
 }
 
 export interface SetSoundEnabled {

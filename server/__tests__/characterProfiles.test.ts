@@ -50,6 +50,22 @@ describe('isCharacterProfile / parseCharacterProfiles', () => {
     parsed!.forEach((profile, i) => expect(profile).toBe(list[i]));
   });
 
+  it('keeps known default tools and drops invalid ones without rejecting profiles', () => {
+    const valid = parseCharacterProfiles([
+      { id: 'a', body: 'flat', defaultTool: 'codex' },
+      { id: 'b', body: 'flat' },
+      { id: 'c', body: 'flat', defaultTool: 42 },
+      { id: 'd', body: 'flat', defaultTool: null },
+    ])!;
+    expect(valid.map((profile) => profile.defaultTool)).toEqual([
+      'codex',
+      undefined,
+      undefined,
+      undefined,
+    ]);
+    expect(isCharacterProfile({ id: 'bad-tool', body: 'flat', defaultTool: null })).toBe(true);
+  });
+
   it('lets unknown keys through, so older formats still reach the migration', () => {
     expect(isCharacterProfile({ body: 'light_male', someLegacyField: [1], v: 30 })).toBe(true);
   });

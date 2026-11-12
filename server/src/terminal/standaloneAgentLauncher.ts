@@ -26,7 +26,7 @@ import { clearContextUsage } from '../contextUsage.js';
 import { directoryAt } from '../directories.js';
 import { startFileWatching } from '../fileWatcher.js';
 import { directoryNameFor, hostDirectory } from '../hostDirectory.js';
-import { assignPaletteIfNeeded } from '../paletteAssigner.js';
+import { assignPaletteIfNeeded, chooseLaunchLook } from '../paletteAssigner.js';
 import type { AgentState } from '../types.js';
 import { inheritedEnv, terminalEnv } from './terminalEnv.js';
 import type { TerminalSession, TerminalSessions } from './terminalSessions.js';
@@ -36,6 +36,7 @@ export interface LaunchStandaloneAgentDeps {
   runtime: AgentRuntime;
   ptyManager: TerminalSessions;
   provider: HookProvider;
+  providerForPalette?: (palette: number) => HookProvider | undefined;
 }
 
 export interface LaunchStandaloneAgentOptions {
@@ -57,14 +58,14 @@ export interface LaunchStandaloneAgentOptions {
 }
 
 /**
- * Spawn a Claude agent in a PTY and register it with the runtime.
+ * Spawn a provider-backed agent in a PTY and register it with the runtime.
  * Returns the new agent id, or null when the terminal is unavailable.
  */
 export function launchStandaloneAgent(
   deps: LaunchStandaloneAgentDeps,
   options: LaunchStandaloneAgentOptions = {},
 ): number | null {
-  const { store, runtime, ptyManager, provider } = deps;
+  const { store, runtime, ptyManager } = deps;
 
   if (!ptyManager.isAvailable()) {
     console.error(`[Pixel Agents] Terminal: cannot launch -- ${ptyManager.unavailableReason()}`);
@@ -73,6 +74,12 @@ export function launchStandaloneAgent(
 
   const cwd = options.directoryPath ?? process.cwd();
   const sessionId = options.resume?.sessionId ?? crypto.randomUUID();
+  const directory = directoryAt(cwd, [hostDirectory()]);
+  const palette = options.resume
+    ? undefined
+    : chooseLaunchLook(store, { picked: options.palette, directory }).palette;
+  const provider =
+    palette === undefined ? deps.provider : deps.providerForPalette?.(palette) ?? deps.provider;
 
   const launch = provider.buildLaunchCommand?.(sessionId, cwd, {
     bypassPermissions: options.bypassPermissions,
@@ -96,7 +103,6 @@ export function launchStandaloneAgent(
   const id = store.nextAgentId.current++;
 
   // The Directory launched into, if the cwd is one: its name and its default characters.
-  const directory = directoryAt(cwd, [hostDirectory()]);
   const agent = createAgentState({
     id,
     sessionId,
@@ -127,7 +133,7 @@ export function launchStandaloneAgent(
   // Server-side, like every other creation path: the palette rides the
   // agentCreated broadcast and is persisted with the agent, so a reload
   // restores the same character without the webview having to save it back.
-  assignPaletteIfNeeded(agent, store, { picked: options.palette, directory });
+  assignPaletteIfNeeded(agent, store, { picked: palette ?? options.palette, directory });
 
   let session;
   try {

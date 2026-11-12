@@ -137,6 +137,39 @@ export function handleCharacterProfilesClientMessage(
   if (sharedChanged) deps.sharedRefsChanged();
 }
 
+/** Update one character's default provider and persist the same profile snapshot. */
+export function setCharacterDefaultTool(
+  profileId: unknown,
+  providerId: unknown,
+  broadcast: (message: ProfilesMessage) => void,
+): void {
+  if (
+    typeof profileId !== 'string' ||
+    !['claude', 'codex', 'agy'].includes(providerId as string)
+  ) {
+    return;
+  }
+  const profiles = getCharacterProfiles();
+  const index = profiles.findIndex((profile) => profile.id === profileId);
+  if (index < 0) return;
+  const next = profiles.map((profile, i) => {
+    if (i !== index) return profile;
+    const updated = { ...profile };
+    if (providerId === 'claude') delete updated.defaultTool;
+    else updated.defaultTool = providerId as string;
+    return updated;
+  });
+  try {
+    const filePath = characterProfilesFile.path();
+    writeJsonAtomic(filePath, next);
+    characterProfilesFile.set(next, filePath);
+  } catch (err) {
+    console.error('[Pixel Agents] Failed to write character default tool:', err);
+    return;
+  }
+  broadcast(characterProfilesLoadedMessage(undefined, next));
+}
+
 /**
  * Follow characters.json and wardrobe-items.json for changes another process makes
  * (another window, the other surface, a hand edit): re-read, update the cache, and hand

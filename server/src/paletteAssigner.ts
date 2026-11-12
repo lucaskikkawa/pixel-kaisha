@@ -6,7 +6,7 @@
  */
 
 import type { Directory } from '../../core/src/messages.js';
-import { chooseLook } from '../../core/src/paletteUtils.js';
+import { chooseLook, type Look } from '../../core/src/paletteUtils.js';
 import type { AgentStateStore } from './agentStateStore.js';
 import { getCharacterProfiles } from './characterProfilesStore.js';
 import { readConfig } from './configPersistence.js';
@@ -48,6 +48,21 @@ export interface LaunchLook {
   directory?: Directory;
 }
 
+/** Resolve the character a new launch will wear using the same rules as assignment. */
+export function chooseLaunchLook(
+  store: AgentStateStore,
+  launch: LaunchLook = {},
+  excludedAgentId?: number,
+): Look {
+  return chooseLook({
+    paletteCount: getPaletteCount(),
+    worn: [...store.values()].filter((existing) => existing.id !== excludedAgentId),
+    picked: launch.picked,
+    directory: launch.directory,
+    reserved: directoryDefaults(),
+  });
+}
+
 /**
  * Give an agent its look (core chooseLook: the roster pick, else a Directory
  * default no one wears, else a random character no one wears; a character
@@ -60,13 +75,7 @@ export function assignPaletteIfNeeded(
   launch: LaunchLook = {},
 ): void {
   if (agent.palette !== undefined) return;
-  const look = chooseLook({
-    paletteCount: getPaletteCount(),
-    worn: [...store.values()].filter((existing) => existing.id !== agent.id),
-    picked: launch.picked,
-    directory: launch.directory,
-    reserved: directoryDefaults(),
-  });
+  const look = chooseLaunchLook(store, launch, agent.id);
   agent.palette = look.palette;
   agent.repeat = look.repeat;
 }

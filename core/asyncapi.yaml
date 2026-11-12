@@ -156,6 +156,7 @@ components:
         - $ref: '#/components/schemas/SaveAgentSeats'
         - $ref: '#/components/schemas/SaveLayout'
         - $ref: '#/components/schemas/SaveCharacterProfiles'
+        - $ref: '#/components/schemas/SetCharacterDefaultTool'
         - $ref: '#/components/schemas/SetSoundEnabled'
         - $ref: '#/components/schemas/SetLastSeenVersion'
         - $ref: '#/components/schemas/SetAlwaysShowLabels'
@@ -1609,6 +1610,21 @@ components:
           items:
             $ref: '#/components/schemas/WardrobeItem'
 
+    SetCharacterDefaultTool:
+      description: Set the default provider for one character profile. Privileged clients only.
+      type: object
+      additionalProperties: false
+      required: [type, profileId, providerId]
+      properties:
+        type:
+          const: setCharacterDefaultTool
+        profileId:
+          type: string
+          description: The character profile's permanent id.
+        providerId:
+          type: string
+          enum: [claude, codex, agy]
+
     SetSoundEnabled:
       type: object
       additionalProperties: false
@@ -2267,6 +2283,10 @@ components:
             path is stored; the content is read on request (`requestCharacterMemory`), never
             written. Absent = none. Blank, too long (> 1024) or not a string is dropped on
             save without refusing the profile.
+        defaultTool:
+          type: string
+          enum: [claude, codex, agy]
+          description: Default provider for this character; absent or unknown values use claude.
 
     AgentLook:
       description: An agent's look (see agentCreated.palette and repeat).
