@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { Directory, HooksConsentRequest } from '../../../core/src/messages.js';
+import {
+  isBrowserNotificationsEnabled,
+  noticeForTransition,
+  notifyAgent,
+} from '../agentNotifications.js';
 import { handleCastMessage } from '../characters/castMessages.js';
 import { castStore } from '../characters/castStore.js';
 import { startOfficeSync } from '../characters/officeSprites.js';
@@ -99,6 +104,7 @@ interface ExtensionMessageState {
   selectedAgent: number | null;
   agentTools: Record<number, ToolActivity[]>;
   agentStatuses: Record<number, string>;
+  agentAwaitingInput: Record<number, boolean>;
   /** Latch: true once an agent has had any activity (first tool or status). */
   agentSeenActivity: Record<number, boolean>;
   subagentTools: Record<number, Record<string, ToolActivity[]>>;
@@ -192,7 +198,9 @@ export function useExtensionMessages(
   const [selectedAgent, setSelectedAgent] = useState<number | null>(null);
   const [agentTools, setAgentTools] = useState<Record<number, ToolActivity[]>>({});
   const [agentStatuses, setAgentStatuses] = useState<Record<number, string>>({});
+  const [agentAwaitingInput, setAgentAwaitingInput] = useState<Record<number, boolean>>({});
   const [agentSeenActivity, setAgentSeenActivity] = useState<Record<number, boolean>>({});
+  const noticeStatesRef = useRef<Record<number, 'waiting' | 'done' | 'other'>>({});
   const markSeenActivity = (id: number) =>
     setAgentSeenActivity((prev) => (prev[id] ? prev : { ...prev, [id]: true }));
   const [subagentTools, setSubagentTools] = useState<
@@ -636,10 +644,23 @@ export function useExtensionMessages(
           if (status === 'active') return omitKey(prev, id);
           return { ...prev, [id]: status };
         });
+        setAgentAwaitingInput((prev) =>
+          status === 'waiting' ? { ...prev, [id]: msg.awaitingInput === true } : omitKey(prev, id),
+        );
         os.setAgentActive(id, status === 'active');
         if (status === 'waiting') {
-          os.showWaitingBubble(id, msg.awaitingInput === true);
+          const awaitingInput = msg.awaitingInput === true;
+          os.showWaitingBubble(id, awaitingInput);
           playDoneSound();
+          const next = awaitingInput ? 'waiting' : 'done';
+          const notice = noticeForTransition(noticeStatesRef.current[id], next);
+          noticeStatesRef.current[id] = next;
+          if (notice && isBrowserNotificationsEnabled()) {
+            const name = os.characters.get(id)?.agentName || `Agent ${id}`;
+            notifyAgent(name, notice);
+          }
+        } else {
+          noticeStatesRef.current[id] = 'other';
         }
       } else if (msg.type === 'agentToolPermission') {
         const id = msg.id as number;
@@ -952,6 +973,7 @@ export function useExtensionMessages(
     selectedAgent,
     agentTools,
     agentStatuses,
+    agentAwaitingInput,
     agentSeenActivity,
     subagentTools,
     subagentCharacters,
