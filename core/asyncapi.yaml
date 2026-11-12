@@ -102,6 +102,8 @@ components:
         - $ref: '#/components/schemas/AgentContextUsage'
         # Balloon summary (Pixel Kaisha B2.1)
         - $ref: '#/components/schemas/AgentSummary'
+        # Rooms / presence (Pixel Kaisha B2.3)
+        - $ref: '#/components/schemas/AgentRoomUpdate'
         # Per-agent history (Pixel Kaisha B2.2)
         - $ref: '#/components/schemas/AgentHistory'
         # Layout
@@ -180,6 +182,8 @@ components:
         - $ref: '#/components/schemas/ResumeConversation'
         # Per-agent history (Pixel Kaisha B2.2)
         - $ref: '#/components/schemas/RequestAgentHistory'
+        # Rooms / presence (Pixel Kaisha B2.3)
+        - $ref: '#/components/schemas/SetAgentRoom'
         - $ref: '#/components/schemas/RequestDiagnostics'
       discriminator: type
 
@@ -248,6 +252,11 @@ components:
           description: >-
             Pixel Kaisha B2.1. Current action summary; null = no active tool.
             Absent together with speech when the agent has no summary yet.
+        room:
+          $ref: '#/components/schemas/AgentRoom'
+          description: >-
+            Pixel Kaisha B2.3 (docs/kaisha/protocol-rooms.md). The room the
+            agent is in. A new agent starts in rest. Absent from older servers.
 
     CloudAgents:
       description: >-
@@ -358,6 +367,13 @@ components:
             are listed; missing entries mean no summary yet.
           additionalProperties:
             $ref: '#/components/schemas/AgentSummarySnapshot'
+        rooms:
+          type: object
+          description: >-
+            Pixel Kaisha B2.3 (docs/kaisha/protocol-rooms.md). Map of agent ID
+            (string) to the room it is in. Every agent is listed.
+          additionalProperties:
+            $ref: '#/components/schemas/AgentRoom'
 
     AgentStatus:
       description: Active vs waiting state for an agent (drives character animation).
@@ -679,6 +695,32 @@ components:
           type: array
           items:
             type: integer
+
+    AgentRoom:
+      description: >-
+        Pixel Kaisha B2.3 (docs/kaisha/protocol-rooms.md). The office room an
+        agent is in: work (active, or waiting on the user at its desk), rest
+        (idle), meeting (chosen by a client; stays until a client moves it
+        out or the agent closes).
+      type: string
+      enum: [work, meeting, rest]
+
+    AgentRoomUpdate:
+      description: >-
+        Pixel Kaisha B2.3 (docs/kaisha/protocol-rooms.md). An agent moved to
+        another room. Broadcast only when the room changes: from activity
+        (agentStatus) while the agent is not held in a meeting, or from a
+        client's setAgentRoom.
+      type: object
+      additionalProperties: false
+      required: [type, id, room]
+      properties:
+        type:
+          const: agentRoom
+        id:
+          type: integer
+        room:
+          $ref: '#/components/schemas/AgentRoom'
 
     LayoutLoaded:
       description: |
@@ -1866,6 +1908,26 @@ components:
         limit:
           type: integer
           description: Max entries to return (default 100, hard cap 500).
+
+    SetAgentRoom:
+      description: >-
+        Pixel Kaisha B2.3 (docs/kaisha/protocol-rooms.md). Move an agent to a
+        room. meeting holds it there (activity no longer moves it) until a
+        setAgentRoom with work or rest, or until it closes; work or rest
+        release the hold and the room then follows activity again (recomputed
+        at once). An unknown agent or room is ignored. Privileged clients only
+        (a read-only client is sent the agent's current room back).
+      type: object
+      additionalProperties: false
+      required: [type, id, room]
+      properties:
+        type:
+          const: setAgentRoom
+        id:
+          type: integer
+          description: The agent's id in the office.
+        room:
+          $ref: '#/components/schemas/AgentRoom'
 
     RequestConversations:
       description: >-

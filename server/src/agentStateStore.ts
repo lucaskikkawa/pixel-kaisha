@@ -4,6 +4,7 @@ import { appendFileSync } from 'node:fs';
 import type { StateAdapter } from '../../core/src/adapter.js';
 import type { PersistedAgent } from '../../core/src/schemas.js';
 import { toPersistedAgent } from './agentPersistence.js';
+import { applyStatusMessageRoom } from './agentRoom.js';
 import type { AgentState } from './types.js';
 
 /**
@@ -142,6 +143,18 @@ export class AgentStateStore {
   }
 
   broadcast(message: Record<string, unknown>): void {
+    this.emit(message);
+    // Rooms (B2.3): every agentStatus passes here, so this is the one place
+    // activity moves an agent between work and rest. agentRoom goes out
+    // right after the status, and only when the room changed.
+    applyStatusMessageRoom(
+      message,
+      (id) => this.agents.get(id),
+      (m) => this.emit(m),
+    );
+  }
+
+  private emit(message: Record<string, unknown>): void {
     debugLogBroadcast(message);
     this.emitter.emit('broadcast', message);
   }

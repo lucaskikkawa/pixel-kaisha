@@ -4,6 +4,7 @@ import type { HookProvider } from '../../core/src/provider.js';
 import { resendAgentActivity } from './agentActivityResend.js';
 import { buildAgentDiagnostics } from './agentDiagnostics.js';
 import { buildAgentHistory } from './agentHistory.js';
+import { agentRoomMessage, existingAgentRooms, roomOf, setAgentRoom } from './agentRoom.js';
 import type { AgentRuntime } from './agentRuntime.js';
 import type { AgentStateStore } from './agentStateStore.js';
 import { existingAgentSummaries } from './agentSummary.js';
@@ -270,6 +271,16 @@ export function handleClientMessage(
       );
       break;
     }
+
+    case 'setAgentRoom':
+      // Rooms (B2.3): meeting holds the agent, work/rest hand it back to
+      // activity. Broadcast to every office; bad id/room ignored.
+      setAgentRoom(
+        msg,
+        (id) => store.get(id),
+        (m) => store.broadcast(m),
+      );
+      break;
 
     case 'closeAgent': {
       // Two shapes now: a PTY-backed agent we launched (kill the process -- the
@@ -778,6 +789,8 @@ function handleWebviewReady(send: WsSend, ctx: ClientMessageContext): void {
     providerIds,
     // Balloon summaries (B2.1), only for agents that have one.
     ...(Object.keys(summaries).length > 0 ? { summaries } : {}),
+    // Rooms (B2.3): every agent. Not sensitive, so every client gets it.
+    rooms: existingAgentRooms(store),
   });
   // Pixel Kaisha: the current cloud task lists, privileged clients only.
   if (ctx.privileged) {
@@ -881,6 +894,12 @@ function refuseReadOnly(
         dirs: readConfig().externalAssetDirectories,
       });
       return;
+    case 'setAgentRoom': {
+      // A UI that moved the character already: put it back where it is.
+      const agent = typeof msg.id === 'number' ? ctx.store.get(msg.id) : undefined;
+      if (agent) send(agentRoomMessage(msg.id as number, roomOf(agent)));
+      return;
+    }
     case 'saveCardOrder':
       // The bar showed the reorder already: put it back.
       send(cardOrderMessage(ctx.store.getAdapter()));

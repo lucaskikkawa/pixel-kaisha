@@ -8,6 +8,7 @@ import { rosterPick } from '../../core/src/paletteUtils.js';
 import type { HookProvider } from '../../core/src/provider.js';
 import { buildAgentDiagnostics } from '../../server/src/agentDiagnostics.js';
 import { agentCreatedMessage } from '../../server/src/agentMessages.js';
+import { setAgentRoom } from '../../server/src/agentRoom.js';
 import { AgentRuntime } from '../../server/src/agentRuntime.js';
 import { AgentStateStore } from '../../server/src/agentStateStore.js';
 import type {
@@ -540,6 +541,13 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
             this.runtime.removeAgent(message.id);
           }
         }
+      } else if (message.type === 'setAgentRoom') {
+        // Rooms (B2.3): through the store, so the embedded server's /ws hears it too.
+        setAgentRoom(
+          message,
+          (id) => this.store.get(id),
+          (m) => this.store.broadcast(m),
+        );
       } else if (message.type === 'saveAgentSeats') {
         // Store seat assignments in a separate key (never touched by persistAgents)
         console.log(`[Pixel Agents] State: saveAgentSeats:`, JSON.stringify(message.seats));

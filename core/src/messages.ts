@@ -26,6 +26,7 @@ export type ServerMessage =
   | AgentTeamInfo
   | AgentContextUsage
   | AgentSummary
+  | AgentRoomUpdate
   | AgentHistory
   | LayoutLoaded
   | FurnitureAssetsLoaded
@@ -93,6 +94,7 @@ export type ClientMessage =
   | SearchConversations
   | ResumeConversation
   | RequestAgentHistory
+  | SetAgentRoom
   | RequestDiagnostics;
 
 export interface ProviderCapabilities {
@@ -112,7 +114,10 @@ export interface AgentCreated {
   seatId?: string;
   speech?: string;
   action?: string | null;
+  room?: AgentRoom;
 }
+
+export type AgentRoom = 'work' | 'meeting' | 'rest';
 
 export interface AgentClosed {
   type: 'agentClosed';
@@ -132,6 +137,7 @@ export interface ExistingAgents {
   externalAgents: Record<string, boolean>;
   providerIds?: Record<string, string>;
   summaries?: Record<string, AgentSummarySnapshot>;
+  rooms?: Record<string, AgentRoom>;
 }
 
 export interface AgentSeatMeta {
@@ -235,6 +241,12 @@ export interface AgentSummary {
   id: number;
   speech: string;
   action: string | null;
+}
+
+export interface AgentRoomUpdate {
+  type: 'agentRoom';
+  id: number;
+  room: AgentRoom;
 }
 
 export interface AgentHistory {
@@ -785,6 +797,12 @@ export interface RequestAgentHistory {
   id: number;
   before?: number;
   limit?: number;
+}
+
+export interface SetAgentRoom {
+  type: 'setAgentRoom';
+  id: number;
+  room: AgentRoom;
 }
 
 export interface RequestDiagnostics {

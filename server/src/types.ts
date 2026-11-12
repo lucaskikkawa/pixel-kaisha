@@ -1,6 +1,6 @@
 import type * as vscode from 'vscode';
 
-import type { AgentHistoryEntry } from '../../core/src/messages.js';
+import type { AgentHistoryEntry, AgentRoom } from '../../core/src/messages.js';
 import type { BackgroundSpawns } from './backgroundSpawns.js';
 
 export interface AgentState {
@@ -44,6 +44,15 @@ export interface AgentState {
    *  transcript to re-read), oldest first, at most HISTORY_LIMIT_MAX entries.
    *  In memory only: lost on restart. Never persisted or logged. */
   historyLog?: AgentHistoryEntry[];
+  /** Pixel Kaisha B2.3: the office room the agent is in (see agentRoom.ts).
+   *  Starts at 'rest'. Transient: never persisted, a restored agent starts at rest. */
+  room?: AgentRoom;
+  /** Pixel Kaisha B2.3: the room the last agentStatus meant (work or rest),
+   *  kept while a meeting holds the agent so releasing it lands right. */
+  activityRoom?: Extract<AgentRoom, 'work' | 'rest'>;
+  /** Pixel Kaisha B2.3: a client put the agent in a meeting; activity does not
+   *  move it until a setAgentRoom work/rest. Lost on restart. */
+  roomPinned?: boolean;
   /** Timestamp of last JSONL data received (ms since epoch) */
   lastDataAt: number;
   /** Total JSONL lines processed for this agent */
