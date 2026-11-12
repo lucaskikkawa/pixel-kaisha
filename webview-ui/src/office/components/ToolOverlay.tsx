@@ -194,6 +194,12 @@ export function ToolOverlay({
   const sizes = sizesRef.current;
   // F2.1: what the balloons must keep clear of, and the balloons to place.
   const obstacles: Rect[] = [...controlRects(containerRect, controlsRef.current)];
+  // Bottom chrome is the lowest-screen control cluster: on short screens this
+  // is the character bar; on taller mobile screens it starts at the player.
+  const lowerControls = obstacles.filter((r) => r.top >= containerRect.height * 0.8);
+  const safeBottom = lowerControls.length
+    ? Math.min(...lowerControls.map((r) => r.top))
+    : containerRect.height;
   const balloonRequests: Array<BalloonRequest & { lines: BalloonLines; front: boolean }> = [];
 
   const selectedId = officeState.selectedAgentId;
@@ -493,9 +499,10 @@ export function ToolOverlay({
   balloonRequests.sort((a, b) => Number(b.front) - Number(a.front) || b.bottom - a.bottom);
   const placements = placeBalloons(balloonRequests, obstacles, {
     bounds: { width: containerRect.width, height: containerRect.height },
+    safeBottom,
     maxLiftPx: (SUMMARY_BALLOON_MAX_LIFT_TILES * TILE_SIZE * zoom) / dpr,
     stepPx: SUMMARY_BALLOON_STEP_PX,
-    marginPx: SUMMARY_BALLOON_GAP_PX,
+    marginPx: Math.max(8, SUMMARY_BALLOON_GAP_PX),
   });
   offsetsRef.current = new Map(
     [...placements].filter(([, p]) => p.clear).map(([id, p]) => [id, { dx: p.dx, lift: p.lift }]),

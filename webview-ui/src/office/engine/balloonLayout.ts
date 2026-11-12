@@ -39,6 +39,8 @@ export interface BalloonPlacement extends BalloonOffset {
 export interface BalloonLayoutOptions {
   /** The office's size in CSS px: balloons stay inside it. */
   bounds: { width: number; height: number };
+  /** Top edge of bottom chrome; balloons stay above it. Defaults to viewport bottom. */
+  safeBottom?: number;
   /** How far a balloon may rise above its natural place to find room. */
   maxLiftPx: number;
   /** Rise step. */
@@ -68,6 +70,8 @@ export function placeBalloons(
   opts: BalloonLayoutOptions,
 ): Map<number, BalloonPlacement> {
   const { bounds, maxLiftPx, stepPx, marginPx } = opts;
+  const safeBottom = Math.min(bounds.height, opts.safeBottom ?? bounds.height);
+  const maxBottom = safeBottom - marginPx;
   const placed: Rect[] = [];
   const result = new Map<number, BalloonPlacement>();
 
@@ -81,7 +85,7 @@ export function placeBalloons(
       rect.left >= marginPx &&
       rect.top >= marginPx &&
       rect.right <= bounds.width - marginPx &&
-      rect.bottom <= bounds.height - marginPx &&
+      rect.bottom <= maxBottom &&
       !obstacles.some((o) => rectsOverlap(rect, o)) &&
       !placed.some((p) => rectsOverlap(rect, p));
 
@@ -91,9 +95,9 @@ export function placeBalloons(
     const naturalLeft = r.centerX - r.width / 2;
     const edgeDx = [marginPx - naturalLeft, bounds.width - marginPx - r.width - naturalLeft];
     const nudges = [0, -r.width / 4, r.width / 4, -r.width / 2, r.width / 2, -r.width, r.width];
-    const bottomCorrection = Math.max(0, r.bottom - (bounds.height - marginPx));
+    const bottomCorrection = Math.max(0, r.bottom - maxBottom);
     const topCorrection = r.bottom - r.height - marginPx;
-    const maxSearchLift = Math.max(maxLiftPx, bottomCorrection);
+    const maxSearchLift = Math.max(maxLiftPx, bottomCorrection, r.bottom - r.height - marginPx);
     const lifts = new Set<number>([0, bottomCorrection, topCorrection]);
     for (let lift = 0; lift <= maxSearchLift; lift += Math.max(1, stepPx)) lifts.add(lift);
     for (const lift of lifts) {
@@ -101,7 +105,12 @@ export function placeBalloons(
     }
     const found = candidates.find((c) => fits(at(c)));
     const offset = found ?? { dx: 0, lift: 0 };
-    const rect = at(offset);
+    const candidate = at(offset);
+    // The focused balloon remains visible even when no unobstructed position
+    // exists. Keep that fallback inside the safe viewport and above chrome.
+    const left = Math.max(marginPx, Math.min(candidate.left, bounds.width - marginPx - r.width));
+    const top = Math.max(marginPx, Math.min(candidate.top, maxBottom - r.height));
+    const rect = { left, top, right: left + r.width, bottom: top + r.height };
     if (found) placed.push(rect);
     result.set(r.id, { ...offset, left: rect.left, top: rect.top, clear: !!found });
   }

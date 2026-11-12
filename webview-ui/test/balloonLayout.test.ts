@@ -83,6 +83,42 @@ describe('placeBalloons', () => {
     assert.ok(p.top + r.height <= 300 - OPTS.marginPx);
   });
 
+  test('keeps a short-screen focused balloon above bottom chrome and the viewport edge', () => {
+    const r = req(201, 84, 377, 132, 41);
+    const bar: Rect = { left: 0, top: 322, right: 360, bottom: 430 };
+    const player: Rect = { left: 118.75, top: 266, right: 241.25, bottom: 304 };
+    const p = placeBalloons([r], [bar, player], {
+      bounds: { width: 360, height: 374 },
+      safeBottom: 322,
+      maxLiftPx: 40,
+      stepPx: 4,
+      marginPx: 8,
+    }).get(201)!;
+    const rect = rectOf(p, r);
+    assert.equal(p.clear, true);
+    assert.ok(rect.bottom <= 322 - 8);
+    assert.ok(rect.bottom <= 374 - 8);
+    assert.ok(rect.left >= 8 && rect.right <= 360 - 8);
+    assert.equal(rectsOverlap(rect, bar), false);
+    assert.equal(rectsOverlap(rect, player), false);
+  });
+
+  test('clamps an unclear focused balloon into safe bounds', () => {
+    const r = req(202, 84, 377, 132, 41);
+    const wall: Rect = { left: 0, top: 0, right: 360, bottom: 430 };
+    const p = placeBalloons([r], [wall], {
+      bounds: { width: 360, height: 374 },
+      safeBottom: 322,
+      maxLiftPx: 40,
+      stepPx: 4,
+      marginPx: 8,
+    }).get(202)!;
+    const rect = rectOf(p, r);
+    assert.equal(p.clear, false);
+    assert.ok(rect.left >= 8 && rect.right <= 352);
+    assert.ok(rect.top >= 8 && rect.bottom <= 314);
+  });
+
   test('moves a balloon down when its natural position crosses the top edge', () => {
     const r = req(1, 200, 10, 98, 24);
     const p = placeBalloons([r], [], OPTS).get(1)!;
