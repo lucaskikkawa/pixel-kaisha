@@ -104,6 +104,19 @@ function consentDisclosure(): { headline: string; disclosure: string } {
   };
 }
 
+function buildLaunchCommand(
+  _sessionId: string,
+  cwd: string,
+): { command: string; args: string[]; env?: Record<string, string> } {
+  return { command: 'codex', args: [], env: { PWD: cwd } };
+}
+
+/** Hooks-only: there is no transcript to tail; a placeholder dir is enough
+ *  for the standalone launcher's session path. */
+function getSessionDirs(): string[] {
+  return [];
+}
+
 export const codexProvider: HookProvider = {
   kind: 'hook',
   id: 'codex',
@@ -111,6 +124,8 @@ export const codexProvider: HookProvider = {
   protocolVersion: 1,
 
   normalizeHookEvent: normalizeCodexHookEvent,
+  buildLaunchCommand,
+  getSessionDirs,
 
   async installHooks(): Promise<void> {
     installCodexHooks();

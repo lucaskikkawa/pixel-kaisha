@@ -361,7 +361,7 @@ export interface CharacterProfile {
   edits?: Record<string, CharacterPixelEdits>;
   v?: number;
   memoryPath?: string;
-  defaultTool?: string;
+  defaultTool?: DefaultTool;
 }
 
 export interface CharacterColor {
@@ -376,6 +376,8 @@ export interface CharacterColor {
 export interface CharacterPixelEdits {
   cells: Record<string, Record<string, string | null>>;
 }
+
+export type DefaultTool = 'claude' | 'codex' | 'agy';
 
 export interface AgentLook {
   id: number;
@@ -666,7 +668,7 @@ export interface SaveCharacterProfiles {
 export interface SetCharacterDefaultTool {
   type: 'setCharacterDefaultTool';
   profileId: string;
-  providerId: 'claude' | 'codex' | 'agy';
+  providerId: DefaultTool;
 }
 
 export interface SetSoundEnabled {

@@ -3,7 +3,7 @@ import {
   characterRemap,
   parseCharacterProfiles,
 } from '../../core/src/characterProfiles.js';
-import type { AgentLook, CharacterProfilesLoaded } from '../../core/src/messages.js';
+import type { AgentLook, CharacterProfilesLoaded, DefaultTool } from '../../core/src/messages.js';
 import { parseWardrobeItems, type WardrobeItem } from '../../core/src/wardrobeItems.js';
 import type { AgentStateStore } from './agentStateStore.js';
 import {
@@ -143,10 +143,11 @@ export function setCharacterDefaultTool(
   providerId: unknown,
   broadcast: (message: ProfilesMessage) => void,
 ): void {
-  if (
-    typeof profileId !== 'string' ||
-    !['claude', 'codex', 'agy'].includes(providerId as string)
-  ) {
+  const tool: DefaultTool | undefined =
+    providerId === 'claude' || providerId === 'codex' || providerId === 'agy'
+      ? providerId
+      : undefined;
+  if (typeof profileId !== 'string' || tool === undefined) {
     return;
   }
   const profiles = getCharacterProfiles();
@@ -155,8 +156,8 @@ export function setCharacterDefaultTool(
   const next = profiles.map((profile, i) => {
     if (i !== index) return profile;
     const updated = { ...profile };
-    if (providerId === 'claude') delete updated.defaultTool;
-    else updated.defaultTool = providerId as string;
+    if (tool === 'claude') delete updated.defaultTool;
+    else updated.defaultTool = tool;
     return updated;
   });
   try {

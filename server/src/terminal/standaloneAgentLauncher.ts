@@ -91,14 +91,19 @@ export function launchStandaloneAgent(
   }
 
   const dirs = provider.getSessionDirs?.(cwd) ?? [];
-  if (dirs.length === 0) {
+  // Hooks-only providers (Codex, agy) have no sessionFilePattern and no
+  // JSONL transcript: an empty jsonl path is fine. A transcript provider
+  // (Claude) that returns no session dirs still refuses to launch.
+  const hooksOnly = !provider.sessionFilePattern;
+  if (dirs.length === 0 && !hooksOnly) {
     console.error('[Pixel Agents] Terminal: provider returned no session dirs');
     return null;
   }
   // A resumed session's transcript is wherever the CLI filed it (under the
   // Directory's resolved path, when it was reached through a symlink).
-  const jsonlFile = options.resume?.transcript ?? path.join(dirs[0], `${sessionId}.jsonl`);
-  const projectDir = path.dirname(jsonlFile);
+  const jsonlFile =
+    options.resume?.transcript ?? (dirs[0] ? path.join(dirs[0], `${sessionId}.jsonl`) : '');
+  const projectDir = jsonlFile ? path.dirname(jsonlFile) : cwd;
 
   const id = store.nextAgentId.current++;
 
@@ -119,6 +124,7 @@ export function launchStandaloneAgent(
     // for a cwd that is no Directory at all.
     directoryName: directory?.name ?? directoryNameFor(cwd),
     providerId: provider.id,
+    hooksOnly: hooksOnly || undefined,
     seatId: options.resume?.seatId,
   });
   if (options.resume) {

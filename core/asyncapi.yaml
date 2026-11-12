@@ -710,6 +710,14 @@ components:
       type: string
       enum: [work, meeting, rest]
 
+    DefaultTool:
+      description: >-
+        Pixel Kaisha B2.4 (docs/kaisha/protocol-default-tool.md, Front PR #20).
+        A character's default provider. Absent or unknown values are treated
+        as claude and never refuse the profile.
+      type: string
+      enum: [claude, codex, agy]
+
     AgentRoomUpdate:
       description: >-
         Pixel Kaisha B2.3 (docs/kaisha/protocol-rooms.md). An agent moved to
@@ -1622,8 +1630,7 @@ components:
           type: string
           description: The character profile's permanent id.
         providerId:
-          type: string
-          enum: [claude, codex, agy]
+          $ref: '#/components/schemas/DefaultTool'
 
     SetSoundEnabled:
       type: object
@@ -2284,8 +2291,7 @@ components:
             written. Absent = none. Blank, too long (> 1024) or not a string is dropped on
             save without refusing the profile.
         defaultTool:
-          type: string
-          enum: [claude, codex, agy]
+          $ref: '#/components/schemas/DefaultTool'
           description: Default provider for this character; absent or unknown values use claude.
 
     AgentLook:

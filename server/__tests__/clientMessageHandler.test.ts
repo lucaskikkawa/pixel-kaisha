@@ -1166,9 +1166,12 @@ describe('clientMessageHandler: standalone terminal control plane', () => {
     );
     broadcasts = [];
     dispatch({ type: 'launchAgent', palette: 0 }, ctx({ runtime, ptyManager: manager }));
-    expect(broadcasts).toContainEqual(
-      expect.objectContaining({ type: 'agentCreated', providerId: 'agy', palette: 0 }),
-    );
+    // agentCreated is sent on the WebSocket in httpServer, not via store.broadcast.
+    expect(store.size).toBe(1);
+    const agent = [...store.values()][0];
+    expect(agent.providerId).toBe('agy');
+    expect(agent.palette).toBe(0);
+    expect(broadcasts).toContainEqual({ type: 'terminalSessionOpened', agentId: agent.id });
   });
 
   it('launchAgent defaults a profile without defaultTool to Claude', () => {
@@ -1183,9 +1186,11 @@ describe('clientMessageHandler: standalone terminal control plane', () => {
     );
     broadcasts = [];
     dispatch({ type: 'launchAgent', palette: 0 }, ctx({ runtime, ptyManager: manager }));
-    expect(broadcasts).toContainEqual(
-      expect.objectContaining({ type: 'agentCreated', providerId: 'claude', palette: 0 }),
-    );
+    expect(store.size).toBe(1);
+    const agent = [...store.values()][0];
+    expect(agent.providerId).toBe('claude');
+    expect(agent.palette).toBe(0);
+    expect(broadcasts).toContainEqual({ type: 'terminalSessionOpened', agentId: agent.id });
   });
 
   it('launchAgent records no recency when the launch fails', () => {
