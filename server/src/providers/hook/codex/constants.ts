@@ -7,6 +7,8 @@ export const CODEX_HOOK_EVENTS = [
   'PostToolUse',
   'PermissionRequest',
   'Stop',
+  'SubagentStart',
+  'SubagentStop',
 ] as const;
 
 /** Events whose handlers use a matcher group (tool-scoped). */

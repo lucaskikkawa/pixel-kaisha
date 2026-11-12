@@ -38,6 +38,9 @@ export interface PersistedAgent {
   /** Pre-`backgroundSpawns` form (tool ids only), written by releases up to
    *  v1.5.x. Read on restore; never written. */
   backgroundAgentToolIds?: string[];
+  /** Pid of the CLI process running the session, as its hook script reported
+   *  it (Pixel Kaisha B2.5). Lets a restored agent be told live or residual. */
+  processPid?: number;
   /** Preferred character palette (0-5). Persisted so colors stay stable
    *  across server restarts; assignPaletteIfNeeded is a no-op on restore. */
   palette?: number;

@@ -36,6 +36,7 @@ export function toPersistedAgent(agent: AgentState): PersistedAgent | null {
     leadAgentId: agent.leadAgentId,
     teamUsesTmux: agent.teamUsesTmux,
     backgroundSpawns: persistBackgroundSpawns(agent.backgroundSpawns),
+    processPid: agent.processPid,
     palette: agent.palette,
     repeat: agent.repeat,
   };
@@ -73,6 +74,7 @@ export function restoredAgentInit(p: PersistedAgent): Omit<AgentStateInit, 'isEx
     isTeamLead: p.agentName ? undefined : p.isTeamLead,
     leadAgentId: p.leadAgentId,
     teamUsesTmux: p.teamUsesTmux,
+    processPid: p.processPid,
     palette: p.palette,
     repeat: p.repeat ?? legacyRepeat(p.clothesHue ?? p.hueShift),
   };

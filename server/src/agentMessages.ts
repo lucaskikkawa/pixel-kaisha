@@ -1,3 +1,4 @@
+import { roomOf } from './agentRoom.js';
 import { hasSummary, summarySnapshot } from './agentSummary.js';
 import type { AgentState } from './types.js';
 
@@ -24,5 +25,7 @@ export function agentCreatedMessage(id: number, agent: AgentState): Record<strin
     // Balloon summary snapshot (B2.1), only when there is one: older clients
     // ignore it; absent means "nothing to show yet".
     ...(hasSummary(agent) ? summarySnapshot(agent) : {}),
+    // Room (B2.3): where the office should draw it.
+    room: roomOf(agent),
   };
 }

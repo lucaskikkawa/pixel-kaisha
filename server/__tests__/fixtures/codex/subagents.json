@@ -1,0 +1,75 @@
+[
+  {
+    "session_id": "0000cccc-1111-2222-3333-444455556666",
+    "cwd": "/sandbox/calc",
+    "transcript_path": null,
+    "model": "example-model",
+    "hook_event_name": "SessionStart",
+    "source": "startup",
+    "cli_pid": 4242
+  },
+  {
+    "session_id": "0000cccc-1111-2222-3333-444455556666",
+    "cwd": "/sandbox/calc",
+    "transcript_path": null,
+    "model": "example-model",
+    "permission_mode": "default",
+    "turn_id": "turn-1",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "spawn_agent",
+    "tool_use_id": "call_spawn",
+    "tool_input": { "agent_type": "explorer" },
+    "cli_pid": 4242
+  },
+  {
+    "session_id": "0000cccc-1111-2222-3333-444455556666",
+    "cwd": "/sandbox/calc",
+    "transcript_path": null,
+    "model": "example-model",
+    "permission_mode": "default",
+    "turn_id": "turn-1",
+    "hook_event_name": "SubagentStart",
+    "agent_id": "019a0000-aaaa-7000-8000-000000000001",
+    "agent_type": "explorer",
+    "cli_pid": 4242
+  },
+  {
+    "session_id": "0000cccc-1111-2222-3333-444455556666",
+    "cwd": "/sandbox/calc",
+    "transcript_path": null,
+    "model": "example-model",
+    "permission_mode": "default",
+    "turn_id": "turn-1",
+    "hook_event_name": "PreToolUse",
+    "agent_id": "019a0000-aaaa-7000-8000-000000000001",
+    "agent_type": "explorer",
+    "tool_name": "exec_command",
+    "tool_use_id": "call_child_1",
+    "tool_input": { "cmd": "ls calc" },
+    "cli_pid": 4242
+  },
+  {
+    "session_id": "0000cccc-1111-2222-3333-444455556666",
+    "cwd": "/sandbox/calc",
+    "transcript_path": null,
+    "model": "example-model",
+    "permission_mode": "default",
+    "turn_id": "turn-1",
+    "hook_event_name": "SubagentStop",
+    "agent_id": "019a0000-aaaa-7000-8000-000000000001",
+    "agent_type": "explorer",
+    "agent_transcript_path": null,
+    "last_assistant_message": null,
+    "stop_hook_active": false,
+    "cli_pid": 4242
+  },
+  {
+    "session_id": "0000cccc-1111-2222-3333-444455556666",
+    "cwd": "/sandbox/calc",
+    "transcript_path": null,
+    "model": "example-model",
+    "hook_event_name": "SessionEnd",
+    "reason": "exit",
+    "cli_pid": 4242
+  }
+]

@@ -11,6 +11,7 @@ import {
   restoredAgentInit,
   toPersistedAgent,
 } from '../../server/src/agentPersistence.js';
+import { existingAgentRooms } from '../../server/src/agentRoom.js';
 import { createAgentState } from '../../server/src/agentState.js';
 import { AgentStateStore } from '../../server/src/agentStateStore.js';
 import { existingAgentSummaries } from '../../server/src/agentSummary.js';
@@ -532,6 +533,8 @@ export function sendExistingAgents(
     externalAgents,
     // Balloon summaries (B2.1), only for agents that have one.
     ...(Object.keys(summaries).length > 0 ? { summaries } : {}),
+    // Rooms (B2.3): every agent.
+    rooms: existingAgentRooms(agents),
   });
   // Note: sendCurrentAgentStatuses is called separately AFTER layoutLoaded
   // so that agentStatus/agentToolStart messages arrive after characters are created.

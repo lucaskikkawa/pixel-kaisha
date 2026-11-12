@@ -8,6 +8,7 @@ import { rosterPick } from '../../core/src/paletteUtils.js';
 import type { HookProvider } from '../../core/src/provider.js';
 import { buildAgentDiagnostics } from '../../server/src/agentDiagnostics.js';
 import { agentCreatedMessage } from '../../server/src/agentMessages.js';
+import { setAgentRoom } from '../../server/src/agentRoom.js';
 import { AgentRuntime } from '../../server/src/agentRuntime.js';
 import { AgentStateStore } from '../../server/src/agentStateStore.js';
 import type {
@@ -33,8 +34,10 @@ import {
   loadExternalCharacters,
 } from '../../server/src/assetReload.js';
 import { cardOrderMessage, saveCardOrder } from '../../server/src/cardOrder.js';
+import { buildCharacterMemory } from '../../server/src/characterMemory.js';
 import {
   characterProfilesLoadedMessage,
+  getCharacterProfiles,
   handleCharacterProfilesClientMessage,
   watchCharacterProfiles,
 } from '../../server/src/characterProfilesPersistence.js';
@@ -207,6 +210,8 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
 
     // Create shared runtime (owns timer Maps, scanners, hook handler, dismissal tracker)
     this.runtime = new AgentRuntime(this.store, claudeProvider);
+    // Exited session-is-its-process CLIs and residual agents (Pixel Kaisha B2.5).
+    this.runtime.startLifecycleSweep();
 
     this.initServer();
   }
@@ -540,6 +545,24 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
             this.runtime.removeAgent(message.id);
           }
         }
+      } else if (message.type === 'setAgentRoom') {
+        // Rooms (B2.3): through the store, so the embedded server's /ws hears it too.
+        setAgentRoom(
+          message,
+          (id) => this.store.get(id),
+          (m) => this.store.broadcast(m),
+        );
+      } else if (message.type === 'requestCharacterMemory') {
+        // Character memory (B2.4): read only, answered to the panel alone; the
+        // content is never logged.
+        void buildCharacterMemory(message, getCharacterProfiles()).then(
+          (memory) => this.sendOrBuffer({ ...memory }),
+          (err: unknown) =>
+            console.error(
+              '[Pixel Agents] Failed to read character memory:',
+              (err as Error)?.message,
+            ),
+        );
       } else if (message.type === 'saveAgentSeats') {
         // Store seat assignments in a separate key (never touched by persistAgents)
         console.log(`[Pixel Agents] State: saveAgentSeats:`, JSON.stringify(message.seats));

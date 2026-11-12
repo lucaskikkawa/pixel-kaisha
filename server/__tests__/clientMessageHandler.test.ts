@@ -640,6 +640,8 @@ describe('clientMessageHandler: character profiles', () => {
 
   const profilesFile = () => path.join(tempHome, '.pixel-agents', 'characters.json');
   const ctx = (): ClientMessageContext => ({ store, cache: null, privileged: true });
+  const dispatchProfiles = (msg: Record<string, unknown>, context: ClientMessageContext = ctx()) =>
+    handleClientMessage(msg, (m) => sent.push(m), context);
 
   beforeEach(() => {
     tempHome = fs.mkdtempSync(path.join(os.tmpdir(), 'pxl-cmh-profiles-'));
@@ -699,6 +701,57 @@ describe('clientMessageHandler: character profiles', () => {
       profiles,
       items: [],
     });
+  });
+
+  it('setCharacterDefaultTool persists per profile, echoes a snapshot, and ignores invalid targets', () => {
+    const profiles = [
+      { id: 'a', body: 'flat', v: 35 },
+      { id: 'b', body: 'flat', v: 35 },
+    ];
+    dispatchProfiles({ type: 'saveCharacterProfiles', profiles, saveId: 'initial' });
+    broadcasts = [];
+    dispatchProfiles({ type: 'setCharacterDefaultTool', profileId: 'a', providerId: 'codex' });
+    expect(broadcasts.at(-1)).toMatchObject({
+      type: 'characterProfilesLoaded',
+      profiles: [
+        expect.objectContaining({ id: 'a', defaultTool: 'codex' }),
+        { id: 'b', body: 'flat', v: 35 },
+      ],
+    });
+    expect(JSON.parse(fs.readFileSync(profilesFile(), 'utf-8'))[0].defaultTool).toBe('codex');
+    broadcasts = [];
+    dispatchProfiles({ type: 'setCharacterDefaultTool', profileId: 'missing', providerId: 'agy' });
+    dispatchProfiles({ type: 'setCharacterDefaultTool', profileId: 'b', providerId: 'gpt' });
+    expect(broadcasts).toEqual([]);
+    dispatchProfiles({ type: 'setCharacterDefaultTool', profileId: 'b', providerId: 'agy' });
+    expect(
+      JSON.parse(fs.readFileSync(profilesFile(), 'utf-8')).map(
+        (p: { defaultTool?: string }) => p.defaultTool,
+      ),
+    ).toEqual(['codex', 'agy']);
+    sent = [];
+    dispatchProfiles({ type: 'webviewReady' });
+    expect(
+      sent.find((message) => message.type === 'characterProfilesLoaded')?.profiles,
+    ).toMatchObject([
+      { id: 'a', defaultTool: 'codex' },
+      { id: 'b', defaultTool: 'agy' },
+    ]);
+  });
+
+  it('setCharacterDefaultTool is refused for read-only clients', () => {
+    dispatchProfiles({
+      type: 'saveCharacterProfiles',
+      profiles: [{ id: 'a', body: 'flat' }],
+      saveId: 's',
+    });
+    broadcasts = [];
+    dispatchProfiles(
+      { type: 'setCharacterDefaultTool', profileId: 'a', providerId: 'agy' },
+      { ...ctx(), privileged: false },
+    );
+    expect(broadcasts).toEqual([]);
+    expect(JSON.parse(fs.readFileSync(profilesFile(), 'utf-8'))[0].defaultTool).toBeUndefined();
   });
 
   it('a valid current-format save round-trips byte-identically into the broadcast', () => {
@@ -833,6 +886,54 @@ describe('clientMessageHandler: character profiles', () => {
       items: [],
       saveId: 'w',
     });
+  });
+
+  it('requestCharacterMemory: answers the sender with the stored path read; read-only gets nothing', async () => {
+    const memory = path.join(tempHome, 'repo', 'CLAUDE.md');
+    fs.mkdirSync(path.dirname(memory), { recursive: true });
+    fs.writeFileSync(memory, 'remember');
+    handleClientMessage(
+      {
+        type: 'saveCharacterProfiles',
+        profiles: [{ id: 'm', body: 'flat', v: 35, memoryPath: memory }],
+        saveId: 'mem',
+      },
+      (m) => sent.push(m),
+      ctx(),
+    );
+    sent = [];
+    handleClientMessage({ type: 'requestCharacterMemory', profileId: 'm' }, (m) => sent.push(m), {
+      store,
+      cache: null,
+      privileged: false,
+    });
+    handleClientMessage(
+      { type: 'requestCharacterMemory', profileId: 'gone' },
+      (m) => sent.push(m),
+      ctx(),
+    );
+    handleClientMessage(
+      { type: 'requestCharacterMemory', profileId: 'm' },
+      (m) => sent.push(m),
+      ctx(),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const replies = sent.filter((m) => m.type === 'characterMemory');
+    // the read-only request is refused; the other two answered, in either order
+    expect(replies).toHaveLength(2);
+    expect(replies).toContainEqual({
+      type: 'characterMemory',
+      profileId: 'gone',
+      path: '',
+      warning: 'unknown-profile',
+    });
+    expect(replies).toContainEqual({
+      type: 'characterMemory',
+      profileId: 'm',
+      path: memory,
+      content: 'remember',
+    });
+    expect(broadcasts.filter((m) => m.type === 'characterMemory')).toEqual([]);
   });
 
   it('an untokened client cannot save profiles', () => {
@@ -1059,6 +1160,48 @@ describe('clientMessageHandler: standalone terminal control plane', () => {
     expect(store.size).toBe(1);
     expect(readConfig().recentCharacters).toEqual([2]);
     expect(broadcasts).toContainEqual(expect.objectContaining({ type: 'recentCharactersLoaded' }));
+  });
+
+  it('launchAgent uses the picked character defaultTool and announces that provider', () => {
+    const { manager } = workingPtyManager();
+    dispatch(
+      {
+        type: 'saveCharacterProfiles',
+        profiles: [
+          { id: 'a', body: 'flat', defaultTool: 'agy', v: 35 },
+          { id: 'b', body: 'flat', v: 35 },
+        ],
+        saveId: 'provider-test',
+      },
+      ctx({ runtime, ptyManager: manager }),
+    );
+    broadcasts = [];
+    dispatch({ type: 'launchAgent', palette: 0 }, ctx({ runtime, ptyManager: manager }));
+    // agentCreated is sent on the WebSocket in httpServer, not via store.broadcast.
+    expect(store.size).toBe(1);
+    const agent = [...store.values()][0];
+    expect(agent.providerId).toBe('agy');
+    expect(agent.palette).toBe(0);
+    expect(broadcasts).toContainEqual({ type: 'terminalSessionOpened', agentId: agent.id });
+  });
+
+  it('launchAgent defaults a profile without defaultTool to Claude', () => {
+    const { manager } = workingPtyManager();
+    dispatch(
+      {
+        type: 'saveCharacterProfiles',
+        profiles: [{ id: 'a', body: 'flat', v: 35 }],
+        saveId: 'claude-default',
+      },
+      ctx({ runtime, ptyManager: manager }),
+    );
+    broadcasts = [];
+    dispatch({ type: 'launchAgent', palette: 0 }, ctx({ runtime, ptyManager: manager }));
+    expect(store.size).toBe(1);
+    const agent = [...store.values()][0];
+    expect(agent.providerId).toBe('claude');
+    expect(agent.palette).toBe(0);
+    expect(broadcasts).toContainEqual({ type: 'terminalSessionOpened', agentId: agent.id });
   });
 
   it('launchAgent records no recency when the launch fails', () => {
