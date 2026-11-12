@@ -55,8 +55,17 @@ export type EyeRows = (typeof EYE_ROWS)[number];
 /** The eye rows a profile without its own wears. */
 export const DEFAULT_EYE_ROWS: EyeRows = 'bottom';
 
-/** The generated profile, with its eye rows narrowed to the ones that exist. */
-export type CharacterProfile = Omit<GeneratedCharacterProfile, 'eyeRows'> & { eyeRows?: EyeRows };
+/**
+ * The generated profile, with its eye rows narrowed to the ones that exist, plus the
+ * character's default tool (Pixel Kaisha, docs/kaisha/protocol-default-tool.md): the
+ * provider id ('claude' | 'codex' | 'agy') its agents launch with. Additive and not
+ * validated here (the profile is open): absent or unknown means 'claude', see
+ * webview-ui/src/characters/defaultTool.ts.
+ */
+export type CharacterProfile = Omit<GeneratedCharacterProfile, 'eyeRows'> & {
+  eyeRows?: EyeRows;
+  defaultTool?: string;
+};
 
 /** The generated profile's string fields that aren't part ids. */
 type NonSlotString = 'id' | 'name' | 'eyeShape' | 'eyeRows';
