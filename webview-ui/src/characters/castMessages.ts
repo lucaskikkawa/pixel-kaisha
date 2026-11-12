@@ -11,7 +11,7 @@ import type {
   RecentCharactersLoaded,
 } from '../../../core/src/messages.js';
 import { parseWardrobeItems } from '../../../core/src/wardrobeItems.js';
-import { castStore } from './castStore.js';
+import { castStore, defaultToolSync } from './castStore.js';
 import { setExternalCharacterSprites } from './officeSprites.js';
 
 /** What the cast's messages change in the office besides the cast. */
@@ -27,8 +27,11 @@ export function handleCastMessage(msg: { type?: unknown }, office: CastOffice): 
     // new look comes with the list, applied first so no frame mixes the two.
     for (const look of loaded.agentLooks ?? [])
       office.setAgentLook(look.id, look.palette, look.repeat);
+    const profiles = parseCharacterProfiles(loaded.profiles);
+    // what the server holds now: the next save sends the default tools that differ from it
+    if (profiles) defaultToolSync.loaded(profiles);
     castStore.receiveProfiles(
-      parseCharacterProfiles(loaded.profiles),
+      profiles,
       loaded.saveId,
       loaded.items ? (parseWardrobeItems(loaded.items) ?? undefined) : undefined,
     );

@@ -13,6 +13,7 @@ import { type CastActions, useCastActions } from './castActions.js';
 import type { SpriteView } from './pixelCanvas.js';
 import { SpriteCanvas } from './SpriteCanvas.js';
 import { useStudio } from './studio.js';
+import { ToolPicker } from './ToolPicker.js';
 import { ViewButton } from './ViewButton.js';
 
 const FRONT: SpriteView = { kind: 'frame', facing: 'down', frame: 0 };
@@ -92,6 +93,7 @@ export function RosterPane() {
                 });
               }}
             />
+            <ToolPicker profile={p} index={i} compact />
             {cast.profiles.length > 1 && (
               <button
                 type="button"
@@ -149,6 +151,10 @@ function MoreSheet({ onClose }: { onClose: () => void }) {
           }}
         />
       </label>
+      <div className="chv-more-name">
+        <span>Tool</span>
+        <ToolPicker profile={profile} index={cast.current} />
+      </div>
       <div className="chv-more-grid">
         <HistoryButtons />
         {ROSTER_ACTIONS.map((action) => (
