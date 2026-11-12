@@ -1,5 +1,6 @@
 import type * as vscode from 'vscode';
 
+import type { AgentHistoryEntry } from '../../core/src/messages.js';
 import type { BackgroundSpawns } from './backgroundSpawns.js';
 
 export interface AgentState {
@@ -39,6 +40,10 @@ export interface AgentState {
   /** Raw formatToolStatus label of the tool a hook PreToolUse announced, until
    *  its PostToolUse / Stop. Feeds `action` for hooks-only agents. Transient. */
   hookToolStatus?: string;
+  /** Pixel Kaisha B2.2: speech/action history of a hooks-only agent (no
+   *  transcript to re-read), oldest first, at most HISTORY_LIMIT_MAX entries.
+   *  In memory only: lost on restart. Never persisted or logged. */
+  historyLog?: AgentHistoryEntry[];
   /** Timestamp of last JSONL data received (ms since epoch) */
   lastDataAt: number;
   /** Total JSONL lines processed for this agent */

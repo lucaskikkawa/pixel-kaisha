@@ -102,6 +102,8 @@ components:
         - $ref: '#/components/schemas/AgentContextUsage'
         # Balloon summary (Pixel Kaisha B2.1)
         - $ref: '#/components/schemas/AgentSummary'
+        # Per-agent history (Pixel Kaisha B2.2)
+        - $ref: '#/components/schemas/AgentHistory'
         # Layout
         - $ref: '#/components/schemas/LayoutLoaded'
         # Assets
@@ -176,6 +178,8 @@ components:
         - $ref: '#/components/schemas/RequestConversations'
         - $ref: '#/components/schemas/SearchConversations'
         - $ref: '#/components/schemas/ResumeConversation'
+        # Per-agent history (Pixel Kaisha B2.2)
+        - $ref: '#/components/schemas/RequestAgentHistory'
         - $ref: '#/components/schemas/RequestDiagnostics'
       discriminator: type
 
@@ -587,6 +591,94 @@ components:
           type: string
         action:
           type: [string, 'null']
+
+    AgentHistory:
+      description: >-
+        Pixel Kaisha B2.2 (docs/kaisha/protocol-history.md). One page of an
+        agent's ordered conversation and action history, oldest first. Sent
+        point-to-point to a privileged client in reply to
+        `requestAgentHistory` (never broadcast); it may quote the user.
+      type: object
+      additionalProperties: false
+      required: [type, id, entries]
+      properties:
+        type:
+          const: agentHistory
+        id:
+          type: integer
+        sessionId:
+          type: string
+        entries:
+          type: array
+          description: Chronological (oldest first).
+          items:
+            $ref: '#/components/schemas/AgentHistoryEntry'
+        more:
+          type: boolean
+          description: True when older entries exist past this page.
+        group:
+          $ref: '#/components/schemas/AgentHistoryGroup'
+        reason:
+          type: string
+          description: >-
+            Why the page is empty: 'unknown-agent' (no such agent in the
+            office) or 'invalid-request' (malformed id, limit or before).
+            Absent on success.
+
+    AgentHistoryEntry:
+      description: One speech or action of an agent's history.
+      type: object
+      additionalProperties: false
+      required: [ts, kind, text]
+      properties:
+        ts:
+          type: number
+          description: Epoch ms.
+        kind:
+          $ref: '#/components/schemas/HistoryEntryKind'
+        text:
+          type: string
+          description: Already cut (speech 500, action 120 code points).
+        role:
+          $ref: '#/components/schemas/HistoryEntryRole'
+        toolName:
+          type: string
+          description: Only for kind 'action'.
+        shared:
+          type: boolean
+          description: True when the entry belongs to a shared team session.
+        authorAgentId:
+          type: integer
+          description: Agent id of the author when known (lead or teammate).
+        teamName:
+          type: string
+          description: Team name, when shared.
+
+    HistoryEntryKind:
+      type: string
+      enum: [speech, action]
+
+    HistoryEntryRole:
+      type: string
+      description: Only for kind 'speech'.
+      enum: [user, assistant]
+
+    AgentHistoryGroup:
+      description: >-
+        The team session the agent is (or was) in: its lead and the agents
+        currently in the office that share it.
+      type: object
+      additionalProperties: false
+      required: [memberAgentIds]
+      properties:
+        teamName:
+          type: string
+        leadAgentId:
+          type: integer
+        memberAgentIds:
+          type: array
+          items:
+            type: integer
 
     LayoutLoaded:
       description: |
@@ -1751,6 +1843,29 @@ components:
       properties:
         type:
           const: requestDirectorySuggestions
+
+    RequestAgentHistory:
+      description: >-
+        Pixel Kaisha B2.2 (docs/kaisha/protocol-history.md). Ask for one page
+        of an agent's history; the host replies `agentHistory` to this client
+        only. Privileged clients only (a read-only client gets no reply).
+      type: object
+      additionalProperties: false
+      required: [type, id]
+      properties:
+        type:
+          const: requestAgentHistory
+        id:
+          type: integer
+          description: The agent's id in the office.
+        before:
+          type: number
+          description: >-
+            Exclusive upper bound: return entries with ts < before (epoch ms).
+            For pagination.
+        limit:
+          type: integer
+          description: Max entries to return (default 100, hard cap 500).
 
     RequestConversations:
       description: >-

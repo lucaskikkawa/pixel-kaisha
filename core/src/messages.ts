@@ -26,6 +26,7 @@ export type ServerMessage =
   | AgentTeamInfo
   | AgentContextUsage
   | AgentSummary
+  | AgentHistory
   | LayoutLoaded
   | FurnitureAssetsLoaded
   | CharacterProfilesLoaded
@@ -91,6 +92,7 @@ export type ClientMessage =
   | RequestConversations
   | SearchConversations
   | ResumeConversation
+  | RequestAgentHistory
   | RequestDiagnostics;
 
 export interface ProviderCapabilities {
@@ -233,6 +235,37 @@ export interface AgentSummary {
   id: number;
   speech: string;
   action: string | null;
+}
+
+export interface AgentHistory {
+  type: 'agentHistory';
+  id: number;
+  sessionId?: string;
+  entries: AgentHistoryEntry[];
+  more?: boolean;
+  group?: AgentHistoryGroup;
+  reason?: string;
+}
+
+export interface AgentHistoryEntry {
+  ts: number;
+  kind: HistoryEntryKind;
+  text: string;
+  role?: HistoryEntryRole;
+  toolName?: string;
+  shared?: boolean;
+  authorAgentId?: number;
+  teamName?: string;
+}
+
+export type HistoryEntryKind = 'speech' | 'action';
+
+export type HistoryEntryRole = 'user' | 'assistant';
+
+export interface AgentHistoryGroup {
+  teamName?: string;
+  leadAgentId?: number;
+  memberAgentIds: number[];
 }
 
 export interface LayoutLoaded {
@@ -745,6 +778,13 @@ export interface ResumeConversation {
   type: 'resumeConversation';
   sessionId: string;
   directoryPath: string;
+}
+
+export interface RequestAgentHistory {
+  type: 'requestAgentHistory';
+  id: number;
+  before?: number;
+  limit?: number;
 }
 
 export interface RequestDiagnostics {

@@ -238,3 +238,18 @@ export const NEW_CONVERSATION_TITLE = 'New conversation';
 /** Most agent ids a saved card order keeps. The order is pruned to live agents
  *  on every save, so this only bounds a hand-edited or hostile payload. */
 export const MAX_CARD_ORDER_LENGTH = 1_000;
+
+// ── Per-agent history (Pixel Kaisha B2.2) ───────────────────
+/** Longest speech text in a history entry, in Unicode code points (`…` included). */
+export const HISTORY_TEXT_MAX = 500;
+/** Longest action label in a history entry, in Unicode code points (`…` included). */
+export const HISTORY_ACTION_MAX = 120;
+/** Entries a requestAgentHistory page holds when it names no limit. */
+export const HISTORY_DEFAULT_LIMIT = 100;
+/** Most entries a requestAgentHistory page may hold; also the cap of a
+ *  hooks-only agent's in-memory history buffer. */
+export const HISTORY_LIMIT_MAX = 500;
+/** Most bytes of a transcript's tail read for one history request. */
+export const HISTORY_READ_MAX_BYTES = 2 * 1024 * 1024;
+/** Most transcript records (lines) parsed for one history request (the newest). */
+export const HISTORY_READ_MAX_RECORDS = 5_000;

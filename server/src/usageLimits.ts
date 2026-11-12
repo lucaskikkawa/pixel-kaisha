@@ -38,6 +38,9 @@ export const PRIVILEGED_BROADCAST_TYPES: ReadonlySet<string> = new Set([
   'cloudAgents',
   // Pixel Kaisha B2.1: speech summaries can quote the user's prompt.
   'agentSummary',
+  // Pixel Kaisha B2.2: history replies are sent point-to-point, but if one
+  // were ever broadcast it would carry the user's prompts.
+  'agentHistory',
 ]);
 
 let cache: Record<string, StoredUsage> | null = null;
