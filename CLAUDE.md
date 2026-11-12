@@ -104,6 +104,7 @@ webview-ui/                          React 19 + Canvas UI (depends only on core/
     App.tsx                          Composition root (hooks + components + EditActionBar)
     constants.ts                     Webview magic numbers/strings
     notificationSound.ts             Web Audio API chime
+    agentNotifications.ts             Browser notification preference, permission, and transition helpers
     changelogData.ts                 Changelog modal content
     components/                      React UI (toolbars, modals, settings)
       BottomToolbar.tsx, ZoomControls.tsx, SettingsModal.tsx, InfoModal.tsx,
@@ -224,6 +225,7 @@ webview-ui/                          React 19 + Canvas UI (depends only on core/
         OfficeCanvas.tsx             Canvas, resize, DPR, mouse hit-testing, drag-to-move
         useCanvasTouchGestures.ts    Touch pan / pinch zoom / tap on the canvas
         ToolOverlay.tsx              Activity label + speech bubbles (DOM, above the labels) per character
+      AgentStatusPanel.tsx         Live agent roster with state, provider, active tool, and elapsed time
 
 e2e/                                 Playwright suite (real VS Code + mock-claude scenarios)
   playwright.config.ts

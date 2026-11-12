@@ -43,6 +43,7 @@ import { MobileShell } from './mobile/MobileShell.js';
 import { useMobileMenu } from './mobile/useMobileMenu.js';
 import { useMobileShell } from './mobile/useMobileShell.js';
 import { MusicPlayer } from './music/MusicPlayer.js';
+import { AgentStatusPanel } from './office/components/AgentStatusPanel.js';
 import { OfficeCanvas } from './office/components/OfficeCanvas.js';
 import { ToolOverlay } from './office/components/ToolOverlay.js';
 import { EditorState } from './office/editor/editorState.js';
@@ -106,6 +107,7 @@ function App() {
     selectedAgent,
     agentTools,
     agentStatuses,
+    agentAwaitingInput,
     agentSeenActivity,
     subagentTools,
     subagentCharacters,
@@ -919,6 +921,16 @@ function App() {
 
       {/* The office radio: bottom-right, centred on a phone (the version label sits above it). */}
       {!isDebugMode && <MusicPlayer mobile={isMobile} />}
+
+      {!isDebugMode && (
+        <AgentStatusPanel
+          officeState={officeState}
+          agents={agents}
+          agentTools={agentTools}
+          agentStatuses={agentStatuses}
+          agentAwaitingInput={agentAwaitingInput}
+        />
+      )}
 
       <VersionIndicator
         currentVersion={extensionVersion}

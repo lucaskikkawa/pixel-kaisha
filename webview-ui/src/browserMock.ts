@@ -277,5 +277,41 @@ export function dispatchMockMessages(): void {
     lastSeenVersion: '1.2',
   });
 
+  // `?mock=status` adds a small multi-provider roster for the F2.5 status panel.
+  if (new URLSearchParams(window.location.search).get('mock') === 'status') {
+    const statusAgents = [71, 72, 73];
+    statusAgents.forEach((id, index) =>
+      dispatch({
+        type: 'agentCreated',
+        id,
+        palette: index,
+        providerId: ['claude', 'codex', 'agy'][index],
+        directoryName: `workspace-${index + 1}`,
+      }),
+    );
+    dispatch({
+      type: 'agentToolStart',
+      id: 71,
+      toolId: 'mock-read',
+      status: 'Reading auth.ts',
+      toolName: 'Read',
+    });
+    window.setTimeout(
+      () => dispatch({ type: 'agentStatus', id: 72, status: 'waiting', awaitingInput: true }),
+      1800,
+    );
+    window.setTimeout(
+      () => dispatch({ type: 'agentStatus', id: 73, status: 'waiting', awaitingInput: false }),
+      3600,
+    );
+    // Add `&live=1` to advance the fixture from waiting to finished for notification demos.
+    if (new URLSearchParams(window.location.search).get('live') === '1') {
+      window.setTimeout(
+        () => dispatch({ type: 'agentStatus', id: 72, status: 'waiting', awaitingInput: false }),
+        6000,
+      );
+    }
+  }
+
   console.log('[BrowserMock] Messages dispatched');
 }
