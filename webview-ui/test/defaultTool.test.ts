@@ -22,7 +22,7 @@ const profile = (id: string, defaultTool?: unknown): CharacterProfile =>
 
 /** The app's wiring (castStore.ts + castMessages.ts) over a mocked transport.send. */
 function setup(initial: CharacterProfile[]) {
-  const send = vi.fn<(msg: { type: string }) => void>();
+  const send = vi.fn<(msg: { type: string; profiles?: CharacterProfile[] }) => void>();
   const tools = createDefaultToolSync((msg) => send(msg));
   const store = new CastStore({
     save: (profiles, saveId, items) => {
