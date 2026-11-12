@@ -8,7 +8,9 @@
  * Never log the text these functions handle: it may be the user's prompt.
  */
 
+import { appendHistoryEntry } from './agentHistoryLog.js';
 import type { AgentStateStore } from './agentStateStore.js';
+import { HISTORY_ACTION_MAX, HISTORY_TEXT_MAX } from './constants.js';
 import type { AgentState } from './types.js';
 
 /** Longest speech summary, in Unicode code points (ellipsis included). */
@@ -152,12 +154,30 @@ export function syncAgentSummary(
     if (next && next !== (agent.speech ?? '')) {
       agent.speech = next;
       changed = true;
+      // History (B2.2): a hooks-only agent has no transcript to re-read later.
+      if (agent.hooksOnly) {
+        appendHistoryEntry(agent, {
+          ts: Date.now(),
+          kind: 'speech',
+          text: truncateSummary(speech, HISTORY_TEXT_MAX),
+        });
+      }
     }
   }
   const action = currentAction(agent);
   if (action !== agent.action) {
     agent.action = action;
     changed = true;
+    // History (B2.2): each new tool of a hooks-only agent, with its longer label.
+    if (action && agent.hooksOnly) {
+      const label = agent.hookToolStatus ?? action;
+      appendHistoryEntry(agent, {
+        ts: Date.now(),
+        kind: 'action',
+        text: truncateSummary(label, HISTORY_ACTION_MAX),
+        ...(agent.currentHookToolName ? { toolName: agent.currentHookToolName } : {}),
+      });
+    }
   }
   if (changed) agents.broadcast(agentSummaryMessage(agentId, agent));
   return changed;

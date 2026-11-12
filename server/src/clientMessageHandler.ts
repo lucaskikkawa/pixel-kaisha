@@ -3,6 +3,7 @@ import { rosterPick } from '../../core/src/paletteUtils.js';
 import type { HookProvider } from '../../core/src/provider.js';
 import { resendAgentActivity } from './agentActivityResend.js';
 import { buildAgentDiagnostics } from './agentDiagnostics.js';
+import { buildAgentHistory } from './agentHistory.js';
 import type { AgentRuntime } from './agentRuntime.js';
 import type { AgentStateStore } from './agentStateStore.js';
 import { existingAgentSummaries } from './agentSummary.js';
@@ -248,6 +249,23 @@ export function handleClientMessage(
             transcript: resume.transcript,
             seatId: resume.look?.seatId,
           },
+        },
+      );
+      break;
+    }
+
+    case 'requestAgentHistory': {
+      // Per-agent history (B2.2) may quote the user: privileged clients only,
+      // which the read-only gate above already enforces (a read-only client
+      // gets no reply). Read async so a big transcript never blocks the loop.
+      void buildAgentHistory(store, msg, (agent) => {
+        const provider = hookProviderById(agent.providerId ?? claudeProvider.id) ?? claudeProvider;
+        return (toolName, input) => provider.formatToolStatus(toolName, input);
+      }).then(
+        (history) => send({ ...history }),
+        (err: unknown) => {
+          // Never log the history's text; the error alone.
+          console.error('[Pixel Agents] Failed to build agent history:', (err as Error)?.message);
         },
       );
       break;
