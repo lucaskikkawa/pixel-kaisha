@@ -9,6 +9,10 @@ Pixel Kaisha is a fork of [Pixel Agents](https://github.com/pixel-agents-hq/pixe
 
 ## [Unreleased]
 
+### Added
+
+- Speech and action balloons over the office characters, from the server's `agentSummary` (no model call in the UI). A hooks-only agent (Codex, agy) shows only its action. Balloons stay clear of the characters, labels and controls; on a 360×374 screen they are compact, with the full text as a tooltip. Dev mock: `?mock=summary`.
+
 ## [0.1.1] - 2026-11-10
 
 ### Fixed

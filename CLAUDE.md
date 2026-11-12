@@ -220,10 +220,13 @@ webview-ui/                          React 19 + Canvas UI (depends only on core/
         selectionButtons.ts          The selected item's rotate/delete buttons: geometry, placement, hit test (DOM-free; renderer draws them)
         matrixEffect.ts              Spawn/despawn digital rain (drawing only)
         matrixEffectState.ts         Effect state: startMatrixEffect/advanceMatrixEffect (DOM-free)
+        agentSummary.ts              Pixel Kaisha F2.1: an agent's balloon text from agentSummary / agentCreated / existingAgents.summaries (OfficeState.agentSummaries, keyed by id)
+        balloonLayout.ts             Pixel Kaisha F2.1: placeBalloons — each balloon clear of characters, labels, controls and other balloons, inside the office (else hidden unless in focus)
       components/
         OfficeCanvas.tsx             Canvas, resize, DPR, mouse hit-testing, drag-to-move
         useCanvasTouchGestures.ts    Touch pan / pinch zoom / tap on the canvas
         ToolOverlay.tsx              Activity label + speech bubbles (DOM, above the labels) per character
+        SummaryBalloon.tsx           Pixel Kaisha F2.1: the speech/action balloon (server text as sent; a row only when it has text; compact unless its agent is in focus)
 
 e2e/                                 Playwright suite (real VS Code + mock-claude scenarios)
   playwright.config.ts

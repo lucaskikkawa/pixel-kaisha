@@ -89,6 +89,12 @@ function App() {
           window.setTimeout(() => dispatchCloudMock(window.location.search), 300),
         );
       }
+      // Pixel Kaisha: `?mock=summary` plays the B2.1 speech/action balloons.
+      if (window.location.search.includes('mock=summary')) {
+        void import('./office/summaryMock.js').then(({ dispatchSummaryMock }) =>
+          window.setTimeout(() => dispatchSummaryMock(window.location.search), 300),
+        );
+      }
     }
   }, []);
 
