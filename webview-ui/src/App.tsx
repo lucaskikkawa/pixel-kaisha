@@ -22,6 +22,8 @@ import { Modal } from './components/ui/Modal.js';
 import { VersionIndicator } from './components/VersionIndicator.js';
 import { MobileZoomLevel, ZoomControls } from './components/ZoomControls.js';
 import { CONVERSATION_SIDEBAR_WIDTH_PX, OFFICE_CANVAS_TEST_ID } from './constants.js';
+import { AgentHistoryPanel } from './conversations/AgentHistoryPanel.js';
+import { earlierHistoryRequest, mergeEarlierEntries } from './conversations/agentHistoryView.js';
 import type { ConversationSearchScope } from './conversations/ConversationList.js';
 import { ConversationSearch } from './conversations/ConversationSearch.js';
 import { ConversationSidebar } from './conversations/ConversationSidebar.js';
@@ -159,6 +161,136 @@ function App() {
   // The phone menu (recent conversations + Settings).
   const menu = useMobileMenu();
   const [isCharactersOpen, setIsCharactersOpen] = useState(false);
+  const [historyAgentId, setHistoryAgentId] = useState<number | null>(null);
+  const [agentHistory, setAgentHistory] = useState<
+    import('../../core/src/messages.js').AgentHistory | null
+  >(null);
+  const pendingHistoryBefore = useRef<number | null>(null);
+  const [historyMode, setHistoryMode] = useState<'side' | 'overlay'>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const saved = window.localStorage.getItem('pixel-kaisha-history-mode');
+    return params.get('mode') === 'overlay' ||
+      (params.get('mode') !== 'side' && saved === 'overlay')
+      ? 'overlay'
+      : 'side';
+  });
+  const agentNames = useMemo(
+    () =>
+      new Map(
+        agents.map((id) => {
+          const mockName =
+            new URLSearchParams(window.location.search).get('mock') === 'history'
+              ? ({ 1: 'Claude', 2: 'Codex', 3: 'agy' } as Record<number, string>)[id]
+              : undefined;
+          return [id, getOfficeState().characters.get(id)?.agentName ?? mockName ?? `Agent ${id}`];
+        }),
+      ),
+    [agents],
+  );
+  const closeAgentHistory = useCallback(() => setHistoryAgentId(null), []);
+  useEffect(
+    () =>
+      transport.onMessage((msg) => {
+        if (msg.type === 'agentHistory' && msg.id === historyAgentId) {
+          const isEarlierPage = pendingHistoryBefore.current !== null;
+          pendingHistoryBefore.current = null;
+          setAgentHistory((current) =>
+            isEarlierPage && current?.id === msg.id
+              ? {
+                  ...msg,
+                  entries: mergeEarlierEntries(current.entries, msg.entries),
+                  group: msg.group ?? current.group,
+                  sessionId: msg.sessionId ?? current.sessionId,
+                }
+              : msg,
+          );
+        }
+      }),
+    [historyAgentId],
+  );
+  const openAgentHistory = useCallback((id: number) => {
+    setHistoryAgentId(id);
+    setAgentHistory(null);
+    pendingHistoryBefore.current = null;
+    transport.send({ type: 'requestAgentHistory', id });
+    if (new URLSearchParams(window.location.search).get('mock') === 'history') {
+      const now = Date.now();
+      setAgentHistory({
+        type: 'agentHistory',
+        id,
+        entries: [
+          {
+            ts: now - 180000,
+            kind: 'speech',
+            role: 'user',
+            text: 'Revise o fluxo de autenticação e resuma os próximos passos.',
+            shared: true,
+            teamName: 'Kaisha Web',
+            authorAgentId: id,
+          },
+          {
+            ts: now - 120000,
+            kind: 'action',
+            toolName: 'Read',
+            text: 'Leu os módulos de sessão e autenticação.',
+            shared: true,
+            teamName: 'Kaisha Web',
+            authorAgentId: id,
+          },
+          {
+            ts: now - 60000,
+            kind: 'speech',
+            role: 'assistant',
+            text: 'O fluxo está consistente; vou registrar os testes que faltam.',
+            shared: true,
+            teamName: 'Kaisha Web',
+            authorAgentId: id === 1 ? 2 : 1,
+          },
+        ],
+        more: true,
+        group: { teamName: 'Kaisha Web', leadAgentId: id, memberAgentIds: [id, id === 1 ? 2 : 1] },
+      });
+    }
+  }, []);
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('mock') !== 'history') return;
+    const timer = window.setTimeout(() => openAgentHistory(1), 1600);
+    return () => window.clearTimeout(timer);
+  }, [openAgentHistory]);
+  const loadEarlierHistory = useCallback(() => {
+    if (historyAgentId === null || !agentHistory?.entries.length) return;
+    const request = earlierHistoryRequest(historyAgentId, agentHistory.entries);
+    if (request) {
+      pendingHistoryBefore.current = request.before;
+      transport.send(request);
+    }
+    if (new URLSearchParams(window.location.search).get('mock') === 'history') {
+      setAgentHistory((current) =>
+        current
+          ? {
+              ...current,
+              more: false,
+              entries: [
+                {
+                  ts: current.entries[0].ts - 60000,
+                  kind: 'action',
+                  toolName: 'Search',
+                  text: 'Pesquisou referências anteriores do histórico.',
+                  shared: true,
+                  teamName: current.group?.teamName,
+                  authorAgentId: historyAgentId,
+                },
+                ...current.entries,
+              ],
+            }
+          : current,
+      );
+    }
+  }, [historyAgentId, agentHistory]);
+  const changeHistoryMode = useCallback((mode: 'side' | 'overlay') => {
+    setHistoryMode(mode);
+    window.localStorage.setItem('pixel-kaisha-history-mode', mode);
+  }, []);
   const openCharacters = useCallback(() => {
     setIsSettingsOpen(false);
     setIsCharactersOpen(true);
@@ -554,6 +686,7 @@ function App() {
       <OfficeCanvas
         officeState={officeState}
         onClick={handleClick}
+        onCharacterClick={openAgentHistory}
         isEditMode={editor.isEditMode}
         editorState={editorState}
         onEditorTileAction={editor.handleEditorTileAction}
@@ -886,6 +1019,19 @@ function App() {
             />
           )}
         </>
+      )}
+
+      {historyAgentId !== null && !isDebugMode && (
+        <AgentHistoryPanel
+          history={agentHistory?.id === historyAgentId ? agentHistory : null}
+          agentId={historyAgentId}
+          agentName={agentNames.get(historyAgentId) ?? `Agent ${historyAgentId}`}
+          mode={historyMode}
+          onMode={changeHistoryMode}
+          onClose={closeAgentHistory}
+          onEarlier={loadEarlierHistory}
+          names={agentNames}
+        />
       )}
 
       {/* Hooks info modal. Top level, beside the other modals: inside the
