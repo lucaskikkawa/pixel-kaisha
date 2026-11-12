@@ -111,6 +111,18 @@ function consentDisclosure(): { headline: string; disclosure: string } {
   };
 }
 
+function buildLaunchCommand(
+  _sessionId: string,
+  cwd: string,
+): { command: string; args: string[]; env?: Record<string, string> } {
+  return { command: 'agy', args: [], env: { PWD: cwd } };
+}
+
+/** Hooks-only: no transcript is tailed. */
+function getSessionDirs(): string[] {
+  return [];
+}
+
 export const agyProvider: HookProvider = {
   kind: 'hook',
   id: 'agy',
@@ -119,6 +131,8 @@ export const agyProvider: HookProvider = {
 
   normalizeHookEvent: normalizeAgyHookEvent,
   sessionEndsWithProcess: true,
+  buildLaunchCommand,
+  getSessionDirs,
 
   async installHooks(): Promise<void> {
     installAgyHooks();

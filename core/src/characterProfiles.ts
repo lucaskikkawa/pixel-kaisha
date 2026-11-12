@@ -59,7 +59,7 @@ export const DEFAULT_EYE_ROWS: EyeRows = 'bottom';
 export type CharacterProfile = Omit<GeneratedCharacterProfile, 'eyeRows'> & { eyeRows?: EyeRows };
 
 /** The generated profile's string fields that aren't part ids. */
-type NonSlotString = 'id' | 'name' | 'eyeShape' | 'eyeRows' | 'memoryPath';
+type NonSlotString = 'id' | 'name' | 'eyeShape' | 'eyeRows' | 'memoryPath' | 'defaultTool';
 type GeneratedSlot = {
   [K in keyof GeneratedCharacterProfile]-?: GeneratedCharacterProfile[K] extends string | undefined
     ? K extends NonSlotString
@@ -168,6 +168,19 @@ function withMemoryPath(profile: CharacterProfile): CharacterProfile {
   return next;
 }
 
+/** Unknown or malformed provider choices behave like an absent choice (Claude). */
+function withDefaultTool(profile: CharacterProfile): CharacterProfile {
+  if (
+    profile.defaultTool === undefined ||
+    ['claude', 'codex', 'agy'].includes(profile.defaultTool)
+  ) {
+    return profile;
+  }
+  const next = { ...profile };
+  delete next.defaultTool;
+  return next;
+}
+
 function isMapOf(value: unknown, isEntry: (entry: unknown) => boolean): boolean {
   return isRecord(value) && Object.values(value).every(isEntry);
 }
@@ -210,7 +223,7 @@ export function parseCharacterProfiles(value: unknown): CharacterProfile[] | nul
   if (!value.every(isCharacterProfile)) return null;
   const taken = new Set<string>();
   return value.map((p, i) => {
-    const next = withMemoryPath(migrateCharacterProfile(p));
+    const next = withDefaultTool(withMemoryPath(migrateCharacterProfile(p)));
     let id = next.id ?? `char-${i}`;
     for (let n = i; taken.has(id); n += value.length) id = `${id.slice(0, 50)}-${n}`;
     taken.add(id);

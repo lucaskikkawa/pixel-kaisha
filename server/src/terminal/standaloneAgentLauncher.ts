@@ -26,7 +26,7 @@ import { clearContextUsage } from '../contextUsage.js';
 import { directoryAt } from '../directories.js';
 import { startFileWatching } from '../fileWatcher.js';
 import { directoryNameFor, hostDirectory } from '../hostDirectory.js';
-import { assignPaletteIfNeeded } from '../paletteAssigner.js';
+import { assignPaletteIfNeeded, chooseLaunchLook } from '../paletteAssigner.js';
 import type { AgentState } from '../types.js';
 import { inheritedEnv, terminalEnv } from './terminalEnv.js';
 import type { TerminalSession, TerminalSessions } from './terminalSessions.js';
@@ -36,6 +36,7 @@ export interface LaunchStandaloneAgentDeps {
   runtime: AgentRuntime;
   ptyManager: TerminalSessions;
   provider: HookProvider;
+  providerForPalette?: (palette: number) => HookProvider | undefined;
 }
 
 export interface LaunchStandaloneAgentOptions {
@@ -57,14 +58,14 @@ export interface LaunchStandaloneAgentOptions {
 }
 
 /**
- * Spawn a Claude agent in a PTY and register it with the runtime.
+ * Spawn a provider-backed agent in a PTY and register it with the runtime.
  * Returns the new agent id, or null when the terminal is unavailable.
  */
 export function launchStandaloneAgent(
   deps: LaunchStandaloneAgentDeps,
   options: LaunchStandaloneAgentOptions = {},
 ): number | null {
-  const { store, runtime, ptyManager, provider } = deps;
+  const { store, runtime, ptyManager } = deps;
 
   if (!ptyManager.isAvailable()) {
     console.error(`[Pixel Agents] Terminal: cannot launch -- ${ptyManager.unavailableReason()}`);
@@ -73,6 +74,12 @@ export function launchStandaloneAgent(
 
   const cwd = options.directoryPath ?? process.cwd();
   const sessionId = options.resume?.sessionId ?? crypto.randomUUID();
+  const directory = directoryAt(cwd, [hostDirectory()]);
+  const palette = options.resume
+    ? undefined
+    : chooseLaunchLook(store, { picked: options.palette, directory }).palette;
+  const provider =
+    palette === undefined ? deps.provider : (deps.providerForPalette?.(palette) ?? deps.provider);
 
   const launch = provider.buildLaunchCommand?.(sessionId, cwd, {
     bypassPermissions: options.bypassPermissions,
@@ -84,19 +91,23 @@ export function launchStandaloneAgent(
   }
 
   const dirs = provider.getSessionDirs?.(cwd) ?? [];
-  if (dirs.length === 0) {
+  // Hooks-only providers (Codex, agy) have no sessionFilePattern and no
+  // JSONL transcript: an empty jsonl path is fine. A transcript provider
+  // (Claude) that returns no session dirs still refuses to launch.
+  const hooksOnly = !provider.sessionFilePattern;
+  if (dirs.length === 0 && !hooksOnly) {
     console.error('[Pixel Agents] Terminal: provider returned no session dirs');
     return null;
   }
   // A resumed session's transcript is wherever the CLI filed it (under the
   // Directory's resolved path, when it was reached through a symlink).
-  const jsonlFile = options.resume?.transcript ?? path.join(dirs[0], `${sessionId}.jsonl`);
-  const projectDir = path.dirname(jsonlFile);
+  const jsonlFile =
+    options.resume?.transcript ?? (dirs[0] ? path.join(dirs[0], `${sessionId}.jsonl`) : '');
+  const projectDir = jsonlFile ? path.dirname(jsonlFile) : cwd;
 
   const id = store.nextAgentId.current++;
 
   // The Directory launched into, if the cwd is one: its name and its default characters.
-  const directory = directoryAt(cwd, [hostDirectory()]);
   const agent = createAgentState({
     id,
     sessionId,
@@ -113,6 +124,7 @@ export function launchStandaloneAgent(
     // for a cwd that is no Directory at all.
     directoryName: directory?.name ?? directoryNameFor(cwd),
     providerId: provider.id,
+    hooksOnly: hooksOnly || undefined,
     seatId: options.resume?.seatId,
   });
   if (options.resume) {
@@ -127,7 +139,7 @@ export function launchStandaloneAgent(
   // Server-side, like every other creation path: the palette rides the
   // agentCreated broadcast and is persisted with the agent, so a reload
   // restores the same character without the webview having to save it back.
-  assignPaletteIfNeeded(agent, store, { picked: options.palette, directory });
+  assignPaletteIfNeeded(agent, store, { picked: palette ?? options.palette, directory });
 
   let session;
   try {

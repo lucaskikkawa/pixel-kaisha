@@ -16,6 +16,7 @@ import {
   getCharacterProfiles,
   handleCharacterProfilesClientMessage,
   refusedSaveAnswer,
+  setCharacterDefaultTool,
 } from './characterProfilesPersistence.js';
 import { latestCloudMessages } from './cloudPoller.js';
 import {
@@ -191,7 +192,16 @@ export function handleClientMessage(
       // back to the server cwd (launchStandaloneAgent's own default).
       const picked = rosterPick(msg.palette, getPaletteCount());
       const launched = launchStandaloneAgent(
-        { store, runtime, ptyManager: ctx.ptyManager, provider: claudeProvider },
+        {
+          store,
+          runtime,
+          ptyManager: ctx.ptyManager,
+          provider: claudeProvider,
+          providerForPalette: (palette) => {
+            const profile = getCharacterProfiles()[palette];
+            return hookProviderById(profile?.defaultTool) ?? claudeProvider;
+          },
+        },
         {
           directoryPath: msg.directoryPath as string | undefined,
           bypassPermissions: adapter?.getSetting(KEY_BYPASS_PERMISSIONS, false) ?? false,
@@ -342,6 +352,10 @@ export function handleClientMessage(
           store.broadcast(recentCharactersMessage());
         },
       });
+      break;
+
+    case 'setCharacterDefaultTool':
+      setCharacterDefaultTool(msg.profileId, msg.providerId, (message) => store.broadcast(message));
       break;
 
     case 'saveAgentSeats':
