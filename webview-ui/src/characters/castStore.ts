@@ -10,15 +10,21 @@ import { useSyncExternalStore } from 'react';
 import type { WardrobeItem } from '../../../core/src/wardrobeItems.js';
 import { transport } from '../transport/index.js';
 import { type CastState, CastStore } from './cast.js';
+import { asClientMessage, createDefaultToolSync } from './defaultTool.js';
 import { decodeItemPng, loadWardrobe } from './loadWardrobe.js';
 import { CharacterRenderer } from './renderer.js';
 import { type ItemArt, type Wardrobe, withItems } from './wardrobe.js';
 
 export type { CastState } from './cast.js';
 
+/** Each character's default tool, sent on a save that changes it (B2.4's integration point). */
+export const defaultToolSync = createDefaultToolSync((msg) => transport.send(asClientMessage(msg)));
+
 export const castStore = new CastStore({
-  save: (profiles, saveId, items) =>
-    transport.send({ type: 'saveCharacterProfiles', profiles, saveId, items }),
+  save: (profiles, saveId, items) => {
+    transport.send({ type: 'saveCharacterProfiles', profiles, saveId, items });
+    defaultToolSync.saved(profiles);
+  },
 });
 
 /** Each item's decoded sheet by id (null: it didn't decode), or its decode in progress. */
