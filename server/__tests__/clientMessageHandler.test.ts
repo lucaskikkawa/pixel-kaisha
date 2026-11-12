@@ -835,6 +835,54 @@ describe('clientMessageHandler: character profiles', () => {
     });
   });
 
+  it('requestCharacterMemory: answers the sender with the stored path read; read-only gets nothing', async () => {
+    const memory = path.join(tempHome, 'repo', 'CLAUDE.md');
+    fs.mkdirSync(path.dirname(memory), { recursive: true });
+    fs.writeFileSync(memory, 'remember');
+    handleClientMessage(
+      {
+        type: 'saveCharacterProfiles',
+        profiles: [{ id: 'm', body: 'flat', v: 35, memoryPath: memory }],
+        saveId: 'mem',
+      },
+      (m) => sent.push(m),
+      ctx(),
+    );
+    sent = [];
+    handleClientMessage({ type: 'requestCharacterMemory', profileId: 'm' }, (m) => sent.push(m), {
+      store,
+      cache: null,
+      privileged: false,
+    });
+    handleClientMessage(
+      { type: 'requestCharacterMemory', profileId: 'gone' },
+      (m) => sent.push(m),
+      ctx(),
+    );
+    handleClientMessage(
+      { type: 'requestCharacterMemory', profileId: 'm' },
+      (m) => sent.push(m),
+      ctx(),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const replies = sent.filter((m) => m.type === 'characterMemory');
+    // the read-only request is refused; the other two answered, in either order
+    expect(replies).toHaveLength(2);
+    expect(replies).toContainEqual({
+      type: 'characterMemory',
+      profileId: 'gone',
+      path: '',
+      warning: 'unknown-profile',
+    });
+    expect(replies).toContainEqual({
+      type: 'characterMemory',
+      profileId: 'm',
+      path: memory,
+      content: 'remember',
+    });
+    expect(broadcasts.filter((m) => m.type === 'characterMemory')).toEqual([]);
+  });
+
   it('an untokened client cannot save profiles', () => {
     const profiles = [{ body: 'flat' }];
     handleClientMessage(

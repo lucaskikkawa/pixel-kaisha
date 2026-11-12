@@ -34,8 +34,10 @@ import {
   loadExternalCharacters,
 } from '../../server/src/assetReload.js';
 import { cardOrderMessage, saveCardOrder } from '../../server/src/cardOrder.js';
+import { buildCharacterMemory } from '../../server/src/characterMemory.js';
 import {
   characterProfilesLoadedMessage,
+  getCharacterProfiles,
   handleCharacterProfilesClientMessage,
   watchCharacterProfiles,
 } from '../../server/src/characterProfilesPersistence.js';
@@ -547,6 +549,17 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
           message,
           (id) => this.store.get(id),
           (m) => this.store.broadcast(m),
+        );
+      } else if (message.type === 'requestCharacterMemory') {
+        // Character memory (B2.4): read only, answered to the panel alone; the
+        // content is never logged.
+        void buildCharacterMemory(message, getCharacterProfiles()).then(
+          (memory) => this.sendOrBuffer({ ...memory }),
+          (err: unknown) =>
+            console.error(
+              '[Pixel Agents] Failed to read character memory:',
+              (err as Error)?.message,
+            ),
         );
       } else if (message.type === 'saveAgentSeats') {
         // Store seat assignments in a separate key (never touched by persistAgents)

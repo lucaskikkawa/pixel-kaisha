@@ -10,8 +10,10 @@ import type { AgentStateStore } from './agentStateStore.js';
 import { existingAgentSummaries } from './agentSummary.js';
 import type { LoadedAssets, LoadedCharacterSprites, LoadedPetSprites } from './assetLoader.js';
 import { cardOrderMessage, saveCardOrder } from './cardOrder.js';
+import { buildCharacterMemory } from './characterMemory.js';
 import {
   characterProfilesLoadedMessage,
+  getCharacterProfiles,
   handleCharacterProfilesClientMessage,
   refusedSaveAnswer,
 } from './characterProfilesPersistence.js';
@@ -267,6 +269,20 @@ export function handleClientMessage(
         (err: unknown) => {
           // Never log the history's text; the error alone.
           console.error('[Pixel Agents] Failed to build agent history:', (err as Error)?.message);
+        },
+      );
+      break;
+    }
+
+    case 'requestCharacterMemory': {
+      // Character memory (B2.4): read only, never written. It may hold anything
+      // the user keeps there: privileged clients only, which the read-only gate
+      // above already enforces. Async so a big file never blocks the loop.
+      void buildCharacterMemory(msg, getCharacterProfiles()).then(
+        (memory) => send({ ...memory }),
+        (err: unknown) => {
+          // Never log the memory's content; the error alone.
+          console.error('[Pixel Agents] Failed to read character memory:', (err as Error)?.message);
         },
       );
       break;

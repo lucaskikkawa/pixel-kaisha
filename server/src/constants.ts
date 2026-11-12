@@ -253,3 +253,12 @@ export const HISTORY_LIMIT_MAX = 500;
 export const HISTORY_READ_MAX_BYTES = 2 * 1024 * 1024;
 /** Most transcript records (lines) parsed for one history request (the newest). */
 export const HISTORY_READ_MAX_RECORDS = 5_000;
+
+// ── Character memory (Pixel Kaisha B2.4) ────────────────────
+/** Most bytes of memory text one characterMemory reply carries (a file larger
+ *  than this is refused; a folder's files are read until it is reached). */
+export const MEMORY_READ_MAX_BYTES = 256 * 1024;
+/** How far into a file a NUL byte marks it binary (unreadable). */
+export const MEMORY_BINARY_SNIFF_BYTES = 8 * 1024;
+/** The file names a memory folder's listing reads (case-insensitive). */
+export const MEMORY_FOLDER_FILE_RE = /\.(?:md|markdown|txt)$/i;

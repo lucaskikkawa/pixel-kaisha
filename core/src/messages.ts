@@ -28,6 +28,7 @@ export type ServerMessage =
   | AgentSummary
   | AgentRoomUpdate
   | AgentHistory
+  | CharacterMemory
   | LayoutLoaded
   | FurnitureAssetsLoaded
   | CharacterProfilesLoaded
@@ -94,6 +95,7 @@ export type ClientMessage =
   | SearchConversations
   | ResumeConversation
   | RequestAgentHistory
+  | RequestCharacterMemory
   | SetAgentRoom
   | RequestDiagnostics;
 
@@ -280,6 +282,15 @@ export interface AgentHistoryGroup {
   memberAgentIds: number[];
 }
 
+export interface CharacterMemory {
+  type: 'characterMemory';
+  profileId: string;
+  path: string;
+  content?: string;
+  warning?: string;
+  files?: string[];
+}
+
 export interface LayoutLoaded {
   type: 'layoutLoaded';
   layout: Record<string, any> | null;
@@ -348,6 +359,7 @@ export interface CharacterProfile {
   colors?: Record<string, CharacterColor>;
   edits?: Record<string, CharacterPixelEdits>;
   v?: number;
+  memoryPath?: string;
 }
 
 export interface CharacterColor {
@@ -797,6 +809,12 @@ export interface RequestAgentHistory {
   id: number;
   before?: number;
   limit?: number;
+}
+
+export interface RequestCharacterMemory {
+  type: 'requestCharacterMemory';
+  profileId: string;
+  path?: string;
 }
 
 export interface SetAgentRoom {

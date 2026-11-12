@@ -59,7 +59,7 @@ export const DEFAULT_EYE_ROWS: EyeRows = 'bottom';
 export type CharacterProfile = Omit<GeneratedCharacterProfile, 'eyeRows'> & { eyeRows?: EyeRows };
 
 /** The generated profile's string fields that aren't part ids. */
-type NonSlotString = 'id' | 'name' | 'eyeShape' | 'eyeRows';
+type NonSlotString = 'id' | 'name' | 'eyeShape' | 'eyeRows' | 'memoryPath';
 type GeneratedSlot = {
   [K in keyof GeneratedCharacterProfile]-?: GeneratedCharacterProfile[K] extends string | undefined
     ? K extends NonSlotString
@@ -77,8 +77,12 @@ void slotsMatchContract;
  * 35 (the sheet's seated frame: 8 frames a row). Older profiles (30 = the wardrobe artifact's
  * format, 31-32 never shipped, 33 = 7 frames a row, 34 = 7 frames a row, written by the
  * unmerged stable-profile-ids work) are migrated on read, see migrateCharacterProfile.
+ * Optional fields that need no migration (`memoryPath`, B2.4) don't bump it: the migration
+ * copies the whole profile, so they pass through.
  */
 export const CHARACTER_PROFILE_VERSION = 35;
+/** Longest `memoryPath` a profile keeps (longer is dropped). */
+export const MAX_MEMORY_PATH_LENGTH = 1024;
 /** Upper bound on a saved cast, so a hand-edited or hostile payload can't grow the file without limit. */
 export const MAX_CHARACTER_PROFILES = 500;
 
@@ -133,6 +137,37 @@ function isCharacterPixelEdits(value: unknown): value is CharacterPixelEdits {
   );
 }
 
+/**
+ * A profile's `memoryPath` (Pixel Kaisha B2.4, docs/kaisha/protocol-memory.md) as it is kept:
+ * trimmed, absolute or in the home directory ('~', '~/…'; not '~user'), at most MAX_MEMORY_PATH_LENGTH, no NUL. Anything
+ * else (absent, not a string, blank, relative, too long) is undefined: the field is dropped,
+ * the profile is not refused. Only the path is stored; the server reads it, never writes it.
+ */
+export function normalizeMemoryPath(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.length > MAX_MEMORY_PATH_LENGTH || trimmed.includes('\0')) {
+    return undefined;
+  }
+  const absolute =
+    /^~(?:$|[\\/])/.test(trimmed) ||
+    trimmed.startsWith('/') ||
+    trimmed.startsWith('\\') ||
+    /^[A-Za-z]:[\\/]/.test(trimmed);
+  return absolute ? trimmed : undefined;
+}
+
+/** `profile` with its memoryPath normalized; the same object when that changes nothing. */
+function withMemoryPath(profile: CharacterProfile): CharacterProfile {
+  if (profile.memoryPath === undefined) return profile;
+  const memoryPath = normalizeMemoryPath(profile.memoryPath);
+  if (memoryPath === profile.memoryPath) return profile;
+  const next = { ...profile };
+  if (memoryPath === undefined) delete next.memoryPath;
+  else next.memoryPath = memoryPath;
+  return next;
+}
+
 function isMapOf(value: unknown, isEntry: (entry: unknown) => boolean): boolean {
   return isRecord(value) && Object.values(value).every(isEntry);
 }
@@ -141,7 +176,8 @@ function isMapOf(value: unknown, isEntry: (entry: unknown) => boolean): boolean 
  * A profile the renderer can draw without crashing or painting NaN: a string body, string
  * part ids, well-formed colours and pixel edits. Whether a part id exists is the webview's
  * to judge (an unknown one draws nothing). Unknown keys are allowed, so older formats
- * still reach migrateCharacterProfile.
+ * still reach migrateCharacterProfile. `memoryPath` is not judged here: a bad one is dropped
+ * by parseCharacterProfiles rather than refusing the whole profile.
  */
 export function isCharacterProfile(value: unknown): value is CharacterProfile {
   if (!isRecord(value) || typeof value.body !== 'string') return false;
@@ -164,7 +200,8 @@ export function isCharacterProfile(value: unknown): value is CharacterProfile {
  * before drawing. A current-format profile with an id of its own comes back as the same
  * object, untouched. One without an id gets `char-<index>`, and one repeating an earlier
  * profile's id (a copy made before copies got their own) gets `<id>-<index>`: the same on
- * every read, so such a file reads alike until it is saved again.
+ * every read, so such a file reads alike until it is saved again. A `memoryPath` is kept
+ * normalized (normalizeMemoryPath): a blank or invalid one is dropped, never saved as "".
  */
 export function parseCharacterProfiles(value: unknown): CharacterProfile[] | null {
   if (!Array.isArray(value) || value.length === 0 || value.length > MAX_CHARACTER_PROFILES) {
@@ -173,7 +210,7 @@ export function parseCharacterProfiles(value: unknown): CharacterProfile[] | nul
   if (!value.every(isCharacterProfile)) return null;
   const taken = new Set<string>();
   return value.map((p, i) => {
-    const next = migrateCharacterProfile(p);
+    const next = withMemoryPath(migrateCharacterProfile(p));
     let id = next.id ?? `char-${i}`;
     for (let n = i; taken.has(id); n += value.length) id = `${id.slice(0, 50)}-${n}`;
     taken.add(id);
