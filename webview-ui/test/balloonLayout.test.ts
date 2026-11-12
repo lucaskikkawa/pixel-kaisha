@@ -58,6 +58,39 @@ describe('placeBalloons', () => {
     assert.ok(p.left >= OPTS.marginPx);
   });
 
+  test('flips a balloon right when its character is at or beyond the left edge', () => {
+    const r = req(1, -10, 150, 98, 24);
+    const p = placeBalloons([r], [], OPTS).get(1)!;
+    assert.equal(p.clear, true);
+    assert.ok(p.left >= OPTS.marginPx);
+    assert.ok(p.left + r.width <= OPTS.bounds.width - OPTS.marginPx);
+    assert.ok(p.dx > r.width / 2);
+  });
+
+  test('flips a balloon left when its character is at the right edge', () => {
+    const r = req(1, 410, 150, 98, 24);
+    const p = placeBalloons([r], [], OPTS).get(1)!;
+    assert.equal(p.clear, true);
+    assert.ok(p.left >= OPTS.marginPx);
+    assert.ok(p.left + r.width <= OPTS.bounds.width - OPTS.marginPx);
+    assert.ok(p.dx < -r.width / 2);
+  });
+
+  test('lifts a balloon enough to fit below the viewport edge', () => {
+    const r = req(1, 200, 303, 98, 24);
+    const p = placeBalloons([r], [], { ...OPTS, bounds: { width: 400, height: 300 } }).get(1)!;
+    assert.equal(p.clear, true);
+    assert.ok(p.top + r.height <= 300 - OPTS.marginPx);
+  });
+
+  test('moves a balloon down when its natural position crosses the top edge', () => {
+    const r = req(1, 200, 10, 98, 24);
+    const p = placeBalloons([r], [], OPTS).get(1)!;
+    assert.equal(p.clear, true);
+    assert.ok(p.top >= OPTS.marginPx);
+    assert.ok(p.lift < 0);
+  });
+
   test('no room anywhere (a control covers the spot) = not clear', () => {
     const r = req(1, 200, 150);
     const control: Rect = { left: 0, top: 0, right: 400, bottom: 160 };

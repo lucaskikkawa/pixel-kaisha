@@ -56,9 +56,11 @@ export function rectsOverlap(a: Rect, b: Rect): boolean {
  * first, then front to back). Each takes the first clear spot: its natural
  * place, else its last frame's offset if still clear, else rising from its natural place in
  * `stepPx` steps up to `maxLiftPx`, at each height trying its centre and then
- * nudges of a quarter and half its width to either side (so it stays over its
- * own character). A spot must be fully inside the office and clear of every
- * obstacle and of the balloons placed before it.
+ * nudges of a quarter and half its width to either side, then tries full
+ * side flips and viewport-edge alignments. Vertical candidates include the
+ * exact correction needed when the natural position crosses a viewport edge.
+ * A spot must be fully inside the office and clear of every obstacle and of
+ * the balloons placed before it.
  */
 export function placeBalloons(
   requests: BalloonRequest[],
@@ -86,9 +88,16 @@ export function placeBalloons(
     // Its natural place first (over its own head), then last frame's spot.
     const candidates: BalloonOffset[] = [{ dx: 0, lift: 0 }];
     if (r.prefer) candidates.push(r.prefer);
-    const nudges = [0, -r.width / 4, r.width / 4, -r.width / 2, r.width / 2];
-    for (let lift = 0; lift <= maxLiftPx; lift += Math.max(1, stepPx)) {
-      for (const dx of nudges) candidates.push({ dx, lift });
+    const naturalLeft = r.centerX - r.width / 2;
+    const edgeDx = [marginPx - naturalLeft, bounds.width - marginPx - r.width - naturalLeft];
+    const nudges = [0, -r.width / 4, r.width / 4, -r.width / 2, r.width / 2, -r.width, r.width];
+    const bottomCorrection = Math.max(0, r.bottom - (bounds.height - marginPx));
+    const topCorrection = r.bottom - r.height - marginPx;
+    const maxSearchLift = Math.max(maxLiftPx, bottomCorrection);
+    const lifts = new Set<number>([0, bottomCorrection, topCorrection]);
+    for (let lift = 0; lift <= maxSearchLift; lift += Math.max(1, stepPx)) lifts.add(lift);
+    for (const lift of lifts) {
+      for (const dx of [...nudges, ...edgeDx]) candidates.push({ dx, lift });
     }
     const found = candidates.find((c) => fits(at(c)));
     const offset = found ?? { dx: 0, lift: 0 };
