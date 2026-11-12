@@ -25,6 +25,7 @@ export type ServerMessage =
   | SubagentToolPermission
   | AgentTeamInfo
   | AgentContextUsage
+  | AgentSummary
   | LayoutLoaded
   | FurnitureAssetsLoaded
   | CharacterProfilesLoaded
@@ -107,6 +108,8 @@ export interface AgentCreated {
   palette?: number;
   repeat?: number;
   seatId?: string;
+  speech?: string;
+  action?: string | null;
 }
 
 export interface AgentClosed {
@@ -126,12 +129,18 @@ export interface ExistingAgents {
   directoryNames: Record<string, string>;
   externalAgents: Record<string, boolean>;
   providerIds?: Record<string, string>;
+  summaries?: Record<string, AgentSummarySnapshot>;
 }
 
 export interface AgentSeatMeta {
   palette?: number;
   repeat?: number;
   seatId?: string;
+}
+
+export interface AgentSummarySnapshot {
+  speech?: string;
+  action?: string | null;
 }
 
 export interface AgentStatus {
@@ -217,6 +226,13 @@ export interface AgentContextUsage {
   id: number;
   contextTokens: number;
   maxContextTokens: number;
+}
+
+export interface AgentSummary {
+  type: 'agentSummary';
+  id: number;
+  speech: string;
+  action: string | null;
 }
 
 export interface LayoutLoaded {

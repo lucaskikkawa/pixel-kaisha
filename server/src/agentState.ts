@@ -30,6 +30,9 @@ export function createAgentState(init: AgentStateInit): AgentState {
     permissionSent: false,
     hadToolsInTurn: false,
     hookDelivered: false,
+    // Balloon summary (B2.1): empty until the first speech / tool event.
+    speech: undefined,
+    action: undefined,
     lastDataAt: 0,
     linesProcessed: 0,
     seenUnknownRecordTypes: new Set(),

@@ -262,7 +262,13 @@ function registerWebSocketRoute(
 
     // Pipe store events to WebSocket client
     const onAgentAdded = (id: number, agent: AgentState) => {
-      safeSend(socket, agentCreatedMessage(id, agent));
+      const message = agentCreatedMessage(id, agent);
+      // Balloon summaries (B2.1) may quote the user: privileged sockets only.
+      if (!privileged) {
+        delete message.speech;
+        delete message.action;
+      }
+      safeSend(socket, message);
     };
 
     const onAgentRemoved = (id: number) => {

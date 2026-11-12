@@ -36,6 +36,8 @@ export const PRIVILEGED_BROADCAST_TYPES: ReadonlySet<string> = new Set([
   'usageBridgeStatus',
   // Pixel Kaisha: cloud task titles can carry the user's own words.
   'cloudAgents',
+  // Pixel Kaisha B2.1: speech summaries can quote the user's prompt.
+  'agentSummary',
 ]);
 
 let cache: Record<string, StoredUsage> | null = null;

@@ -100,6 +100,8 @@ components:
         - $ref: '#/components/schemas/AgentTeamInfo'
         # Context window
         - $ref: '#/components/schemas/AgentContextUsage'
+        # Balloon summary (Pixel Kaisha B2.1)
+        - $ref: '#/components/schemas/AgentSummary'
         # Layout
         - $ref: '#/components/schemas/LayoutLoaded'
         # Assets
@@ -232,6 +234,16 @@ components:
             The seat the agent should take when it is free (a resumed
             conversation's agent returns to where it sat). Absent, the office
             picks one.
+        speech:
+          type: string
+          description: >-
+            Pixel Kaisha B2.1 (docs/kaisha/protocol-summary.md). Current speech
+            summary, when the agent already has one. Absent = nothing yet.
+        action:
+          type: [string, 'null']
+          description: >-
+            Pixel Kaisha B2.1. Current action summary; null = no active tool.
+            Absent together with speech when the agent has no summary yet.
 
     CloudAgents:
       description: >-
@@ -334,6 +346,14 @@ components:
             codex, agy). Missing entries mean claude.
           additionalProperties:
             type: string
+        summaries:
+          type: object
+          description: >-
+            Pixel Kaisha B2.1 (docs/kaisha/protocol-summary.md). Map of agent ID
+            (string) to its current balloon summary. Only agents that have one
+            are listed; missing entries mean no summary yet.
+          additionalProperties:
+            $ref: '#/components/schemas/AgentSummarySnapshot'
 
     AgentStatus:
       description: Active vs waiting state for an agent (drives character animation).
@@ -533,6 +553,40 @@ components:
           type: integer
         maxContextTokens:
           type: integer
+
+    AgentSummary:
+      description: >-
+        Pixel Kaisha B2.1 (docs/kaisha/protocol-summary.md). Full snapshot of
+        an agent's balloon summary, sent only when it changes. Built by text
+        cutting alone (no model call): speech is the newest visible user or
+        assistant text (max 80 code points), action the current tool label
+        (max 60 code points). Clients replace the whole summary on each
+        message. Privileged and unprivileged clients alike may render it, but
+        speech may hold user text.
+      type: object
+      additionalProperties: false
+      required: [type, id, speech, action]
+      properties:
+        type:
+          const: agentSummary
+        id:
+          type: integer
+        speech:
+          type: string
+          description: Newest speech, already cut. Empty string = none.
+        action:
+          type: [string, 'null']
+          description: Current tool label, already cut. null = no active tool.
+
+    AgentSummarySnapshot:
+      description: One agent's balloon summary in existingAgents.summaries.
+      type: object
+      additionalProperties: false
+      properties:
+        speech:
+          type: string
+        action:
+          type: [string, 'null']
 
     LayoutLoaded:
       description: |

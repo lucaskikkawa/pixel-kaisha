@@ -2,6 +2,7 @@ const debug = process.env.PIXEL_AGENTS_DEBUG !== '0';
 
 import type { HookProvider } from '../../core/src/provider.js';
 import type { AgentStateStore } from './agentStateStore.js';
+import { speechFromTranscriptRecord, syncAgentSummary } from './agentSummary.js';
 import { launchSpawn, readCompletionNotices } from './backgroundSpawns.js';
 import { TEXT_IDLE_DELAY_MS, TOOL_DONE_DELAY_MS } from './constants.js';
 import { updateContextUsage } from './contextUsage.js';
@@ -91,6 +92,7 @@ export function endBackgroundSpawn(
   agent.activeToolStatuses.delete(toolId);
   agent.activeToolNames.delete(toolId);
   backgroundAgentCompletedCallback?.(agentId, toolId);
+  syncAgentSummary(agentId, agent, agents);
   if (!agent.hookDelivered) {
     setTimeout(() => {
       agents.broadcast({ type: 'agentToolDone', id: agentId, toolId });
@@ -542,6 +544,10 @@ export function processTranscriptLine(
         }
       }
     }
+    // Balloon summary (B2.1): newest visible text as speech, newest active
+    // tool as action. Broadcasts only on change, so a value a hook already
+    // sent is not repeated. Never logs the text.
+    syncAgentSummary(agentId, agent, agents, speechFromTranscriptRecord(record));
   } catch {
     // Ignore malformed lines
   }

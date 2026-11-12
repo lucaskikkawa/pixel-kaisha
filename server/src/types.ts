@@ -30,6 +30,15 @@ export interface AgentState {
   hadToolsInTurn: boolean;
   /** Directory name — the agent's origin label (only set for multi-root workspaces) */
   directoryName?: string;
+  /** Pixel Kaisha B2.1: newest speech (user prompt or assistant text), already
+   *  cut by agentSummary.truncateSummary. Transient, never persisted or logged. */
+  speech?: string;
+  /** Pixel Kaisha B2.1: label of the current tool, already cut. Undefined when
+   *  no tool is active. Transient. */
+  action?: string;
+  /** Raw formatToolStatus label of the tool a hook PreToolUse announced, until
+   *  its PostToolUse / Stop. Feeds `action` for hooks-only agents. Transient. */
+  hookToolStatus?: string;
   /** Timestamp of last JSONL data received (ms since epoch) */
   lastDataAt: number;
   /** Total JSONL lines processed for this agent */

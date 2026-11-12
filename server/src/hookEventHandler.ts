@@ -2,6 +2,7 @@ import * as path from 'path';
 
 import type { AgentEvent, HookProvider } from '../../core/src/provider.js';
 import type { AgentStateStore } from './agentStateStore.js';
+import { syncAgentSummary } from './agentSummary.js';
 import { SESSION_END_GRACE_MS } from './constants.js';
 import { pathsMatch } from './pathKey.js';
 import type { SessionRouter } from './sessionRouter.js';
@@ -505,6 +506,9 @@ export class HookEventHandler {
       id: agentId,
       status: 'active',
     });
+    // Balloon summary (B2.1): the provider's own label, cut, as the action.
+    agent.hookToolStatus = status;
+    syncAgentSummary(agentId, agent, this.agents);
   }
 
   /**
@@ -525,6 +529,9 @@ export class HookEventHandler {
       agent.currentHookToolId = undefined;
       agent.currentHookToolName = undefined;
     }
+    // Balloon summary: falls back to a tool still active in the transcript, or null.
+    agent.hookToolStatus = undefined;
+    syncAgentSummary(agentId, agent, this.agents);
   }
 
   // NOTE: PostToolUseFailure used to have its own handler. The behavior was identical
@@ -829,6 +836,9 @@ export class HookEventHandler {
     agent.permissionSent = false;
     agent.hadToolsInTurn = false;
     agent.currentHookToolId = undefined;
+    agent.hookToolStatus = undefined;
+    // Balloon summary: foreground tools are gone (a live background spawn may remain).
+    syncAgentSummary(agentId, agent, this.agents);
     this.agents.broadcast({
       type: 'agentStatus',
       id: agentId,
