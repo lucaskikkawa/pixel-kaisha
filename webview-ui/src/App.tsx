@@ -215,40 +215,61 @@ function App() {
     transport.send({ type: 'requestAgentHistory', id });
     if (new URLSearchParams(window.location.search).get('mock') === 'history') {
       const now = Date.now();
+      const shared = id === 1 || id === 2;
+      const author = id;
+      const actionEntries = [
+        {
+          ts: now - 120000,
+          kind: 'action' as const,
+          toolName: 'Read',
+          text: 'Leu os módulos de sessão e autenticação.',
+          ...(shared ? { shared: true, teamName: 'Kaisha Web' } : {}),
+          authorAgentId: author,
+        },
+        {
+          ts: now - 60000,
+          kind: 'action' as const,
+          toolName: id === 2 ? 'Search' : 'Edit',
+          text:
+            id === 2
+              ? 'Pesquisou referências de autenticação.'
+              : 'Atualizou o estado local do agente.',
+          ...(shared ? { shared: true, teamName: 'Kaisha Web' } : {}),
+          authorAgentId: author,
+        },
+      ];
+      const mockEntries =
+        id === 1
+          ? [
+              {
+                ts: now - 180000,
+                kind: 'speech' as const,
+                role: 'user' as const,
+                text: 'Revise o fluxo de autenticação e resuma os próximos passos.',
+                shared: true,
+                teamName: 'Kaisha Web',
+                authorAgentId: id,
+              },
+              actionEntries[0],
+              {
+                ts: now - 60000,
+                kind: 'speech' as const,
+                role: 'assistant' as const,
+                text: 'O fluxo está consistente; vou registrar os testes que faltam.',
+                shared: true,
+                teamName: 'Kaisha Web',
+                authorAgentId: 2,
+              },
+            ]
+          : actionEntries;
       setAgentHistory({
         type: 'agentHistory',
         id,
-        entries: [
-          {
-            ts: now - 180000,
-            kind: 'speech',
-            role: 'user',
-            text: 'Revise o fluxo de autenticação e resuma os próximos passos.',
-            shared: true,
-            teamName: 'Kaisha Web',
-            authorAgentId: id,
-          },
-          {
-            ts: now - 120000,
-            kind: 'action',
-            toolName: 'Read',
-            text: 'Leu os módulos de sessão e autenticação.',
-            shared: true,
-            teamName: 'Kaisha Web',
-            authorAgentId: id,
-          },
-          {
-            ts: now - 60000,
-            kind: 'speech',
-            role: 'assistant',
-            text: 'O fluxo está consistente; vou registrar os testes que faltam.',
-            shared: true,
-            teamName: 'Kaisha Web',
-            authorAgentId: id === 1 ? 2 : 1,
-          },
-        ],
-        more: true,
-        group: { teamName: 'Kaisha Web', leadAgentId: id, memberAgentIds: [id, id === 1 ? 2 : 1] },
+        entries: mockEntries,
+        more: id === 1,
+        ...(shared
+          ? { group: { teamName: 'Kaisha Web', leadAgentId: 1, memberAgentIds: [1, 2] } }
+          : {}),
       });
     }
   }, []);
