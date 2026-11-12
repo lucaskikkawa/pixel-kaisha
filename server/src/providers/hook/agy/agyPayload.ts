@@ -48,5 +48,7 @@ export function toWireEvent(
   if (typeof raw.error === 'string' && raw.error !== '') out.error = raw.error.slice(0, 200);
   if (str(raw.terminationReason)) out.termination_reason = raw.terminationReason;
   if (typeof raw.fullyIdle === 'boolean') out.fully_idle = raw.fullyIdle;
+  // An end reason, should agy ever send a session-end event of its own.
+  if (str(raw.reason)) out.reason = (raw.reason as string).slice(0, 60);
   return out;
 }

@@ -330,6 +330,9 @@ async function main(): Promise<void> {
     const runtime = new AgentRuntime(store, claudeProvider);
     // Pixel Kaisha: each /api/hooks/<id> event is normalized by provider <id>.
     runtime.setHookProviders(hookProviders);
+    // Pixel Kaisha B2.5: exited agy sessions and residual agents leave the
+    // office while the server runs, whether or not a browser is open.
+    runtime.startLifecycleSweep();
 
     // Agents whose terminals outlived the last server (--pty-host): back in
     // the office before any browser connects.

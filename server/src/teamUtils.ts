@@ -15,9 +15,11 @@ import type { AgentState } from './types.js';
  * `session_id`. Hooks route to it directly; no redirection needed.
  */
 
-/** Is this agent an inline teammate (non-tmux) of the given lead? */
+/** Is this agent an inline teammate (non-tmux) of the given lead? A
+ *  hook-announced sub-agent (Codex) is not: its events name it, so the lead's
+ *  own events stay the lead's. */
 export function isInlineTeammateOf(agent: AgentState, leadId: number): boolean {
-  return agent.leadAgentId === leadId && !agent.teamUsesTmux;
+  return agent.leadAgentId === leadId && !agent.teamUsesTmux && agent.hookSubagentId === undefined;
 }
 
 /** All inline teammates of a lead. Returns [id, agent] pairs for convenience. */

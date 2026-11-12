@@ -3,8 +3,17 @@
  *
  * The hook script converts agy's camelCase payloads to snake_case before
  * POSTing (see agyPayload.ts), so this normalizer reads the same field names
- * as the other providers. Agents are hooks-only. agy has no SessionEnd event:
- * `Stop` ends the turn and the agent then idles like any finished agent.
+ * as the other providers. Agents are hooks-only.
+ *
+ * agy (1.5.x) has no session-end hook: its events are SessionStart, Pre/Post
+ * ToolUse, Pre/PostInvocation and Stop. `Stop` ends a TURN — `fullyIdle` only
+ * says background tasks are done, and a normal turn of an interactive session
+ * ends `NO_TOOL_CALL` + `fullyIdle: true` exactly like the last turn of
+ * `agy -p` (seen live). So no Stop is a session end. The session ends with the
+ * agy process: the hook script reports its pid (`cli_pid`) and, once it is
+ * gone, the runtime feeds us `SessionEnd` (reason `process_exit`), see
+ * `sessionEndsWithProcess`. A `SessionEnd` agy might send itself one day takes
+ * the same path.
  */
 
 import type { AgentEvent, HookProvider } from '../../../../../core/src/provider.js';
@@ -72,10 +81,16 @@ export function normalizeAgyHookEvent(
       };
     case 'PostToolUse':
       return { sessionId, event: { kind: 'toolEnd', toolId: 'current' } };
+    case 'SessionEnd':
+      return {
+        sessionId,
+        event: { kind: 'sessionEnd', reason: str(raw.reason) ?? 'exit' },
+      };
     case 'Stop': {
       const reason = str(raw.termination_reason);
-      // A normal turn ends with NO_TOOL_CALL; anything else (error, limits,
-      // cancel) wants the user's attention.
+      // A turn end, never a session end (see the header). A normal turn ends
+      // with NO_TOOL_CALL; anything else (error, limits, cancel) wants the
+      // user's attention.
       const attention = reason !== undefined && reason !== 'NO_TOOL_CALL';
       return { sessionId, event: { kind: 'turnEnd', awaitingInput: attention || undefined } };
     }
@@ -89,7 +104,7 @@ function consentDisclosure(): { headline: string; disclosure: string } {
   return {
     headline: 'Show Antigravity (agy) sessions in the office?',
     disclosure: [
-      `Pixel Kaisha will add a hook named "pixel-kaisha" to ${file}. It runs a small script on session start, before and after each tool, and when a turn stops, and forwards the session id, event, tool name and a short tool argument (e.g. the command line) to this local server. Your prompts are not forwarded.`,
+      `Pixel Kaisha will add a hook named "pixel-kaisha" to ${file}. It runs a small script on session start, before and after each tool, and when a turn stops, and forwards the session id, event, tool name, a short tool argument (e.g. the command line) and agy's process id (so the character leaves when agy exits) to this local server. Your prompts are not forwarded.`,
       'The script never approves, denies or changes a tool call, and always exits successfully, so agy behaves as without it. agy hooks run synchronously; the script returns at once and gives up on the server after one second.',
       'Turning hooks off removes the "pixel-kaisha" entry and restores the file (a backup is kept next to it until then).',
     ].join('\n\n'),
@@ -103,6 +118,7 @@ export const agyProvider: HookProvider = {
   protocolVersion: 1,
 
   normalizeHookEvent: normalizeAgyHookEvent,
+  sessionEndsWithProcess: true,
 
   async installHooks(): Promise<void> {
     installAgyHooks();

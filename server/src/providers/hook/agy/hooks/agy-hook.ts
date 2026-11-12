@@ -8,12 +8,14 @@
  *     every other event;
  *   - writes its stdout reply first, before any network work;
  *   - always exits 0, whatever happens.
- * It then forwards a reduced, snake_case copy of the event to every live
- * Pixel Kaisha server at /api/hooks/agy (short timeout, fail-open).
+ * It then forwards a reduced, snake_case copy of the event, plus agy's pid
+ * (`cli_pid`), to every live Pixel Kaisha server at /api/hooks/agy (short
+ * timeout, fail-open).
  */
 
 import { HOOK_API_PREFIX } from '../../../../constants.js';
 import { liveServers, postToServer } from '../../claude/hooks/serverRegistry.js';
+import { cliProcessPid } from '../../shared/cliPid.js';
 import { toWireEvent } from '../agyPayload.js';
 
 const POST_TIMEOUT_MS = 1000;
@@ -40,6 +42,9 @@ async function main(): Promise<void> {
   if (!raw) return;
   const wire = toWireEvent(raw, argEvent);
   if (!wire) return;
+  // agy has no session-end hook: the server watches this pid instead.
+  const cliPid = cliProcessPid();
+  if (cliPid !== undefined) wire.cli_pid = cliPid;
   const servers = liveServers(noop, 'agy');
   if (servers === null) return;
   const body = JSON.stringify(wire);

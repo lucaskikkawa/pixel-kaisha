@@ -86,8 +86,35 @@ export function normalizeCodexHookEvent(
       return { sessionId, event: { kind: 'turnEnd' } };
     case 'SessionEnd':
       return { sessionId, event: { kind: 'sessionEnd', reason: str(raw.reason) } };
+    case 'SubagentStart':
+    case 'SubagentStop': {
+      // Codex names the sub-agent (`agent_id`) under its parent's session id,
+      // and its tool events carry the same `agent_id`. No spawning tool to
+      // hang it on: the child character is keyed by that id (toolId).
+      const toolId = str(raw.agent_id);
+      if (!toolId) return null;
+      return eventName === 'SubagentStart'
+        ? {
+            sessionId,
+            event: {
+              kind: 'subagentStart',
+              parentToolId: '',
+              toolId,
+              toolName: str(raw.agent_type) ?? 'subagent',
+            },
+          }
+        : {
+            sessionId,
+            event: {
+              kind: 'subagentEnd',
+              parentToolId: '',
+              toolId,
+              agentTranscriptPath: str(raw.agent_transcript_path),
+            },
+          };
+    }
     default:
-      // UserPromptSubmit, compaction, subagents, interrupt: not shown in v0.1.
+      // UserPromptSubmit, compaction, interrupt: not shown.
       return null;
   }
 }
@@ -97,7 +124,7 @@ function consentDisclosure(): { headline: string; disclosure: string } {
   return {
     headline: 'Show Codex sessions in the office?',
     disclosure: [
-      `Pixel Kaisha will add hook entries to ${file} that run a small script on Codex session start/end, tool use, permission prompts and turn end. The script only forwards the event (session id, event name, tool name and input) to this local server and never blocks or changes what Codex does.`,
+      `Pixel Kaisha will add hook entries to ${file} that run a small script on Codex session start/end, tool use, permission prompts, turn end and sub-agent start/stop. The script only forwards the event (session id, event name, tool name and input, sub-agent id and type) and Codex's process id to this local server and never blocks or changes what Codex does.`,
       'Codex runs new hooks only after you trust them: open Codex in that project and review them in /hooks. Until then nothing appears.',
       'Turning hooks off removes these entries and restores the file (a backup is kept next to it until then). Trust records Codex stored in ~/.codex/config.toml are not touched by Pixel Kaisha.',
     ].join('\n\n'),

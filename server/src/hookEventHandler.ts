@@ -57,6 +57,19 @@ interface SessionLifecycleCallbacks {
   /** Called when a teammate should be removed (e.g. no longer in team config members).
    *  Removes the teammate agent from the office. */
   onTeammateRemoved?: (teammateAgentId: number) => void;
+  /** Pixel Kaisha B2.5: a provider without a TeamProvider (Codex) announced a
+   *  sub-agent of `parentAgentId`, keyed `subagentKey` (its events' agent_id). */
+  onHookSubagentStart?: (parentAgentId: number, subagentKey: string, agentType: string) => void;
+  /** …and that sub-agent stopped. The parent stays. */
+  onHookSubagentEnd?: (parentAgentId: number, subagentKey: string) => void;
+  /** A turn ended (Stop): a good moment to look for residual agents. */
+  onTurnEnd?: (agentId: number) => void;
+}
+
+/** The CLI pid a hook script reported (`cli_pid`, Pixel Kaisha B2.5). */
+function reportedCliPid(event: HookEvent): number | undefined {
+  const pid = event.cli_pid;
+  return typeof pid === 'number' && Number.isInteger(pid) && pid > 1 ? pid : undefined;
 }
 
 export class HookEventHandler {
@@ -224,6 +237,7 @@ export class HookEventHandler {
         const agent = this.agents.get(existingAgentId);
         if (agent) {
           agent.hookDelivered = true;
+          this.noteEvent(agent, event);
         }
         if (debug)
           console.log(
@@ -361,10 +375,20 @@ export class HookEventHandler {
       return;
     }
 
-    const agent = this.agents.get(agentId);
+    let agent = this.agents.get(agentId);
     if (!agent) return;
 
     agent.hookDelivered = true;
+    this.noteEvent(agent, event);
+
+    // A hook-announced sub-agent's own tool events come under its lead's
+    // session, naming it in agent_id (Codex): they belong to its character.
+    const child = this.hookSubagentOf(agentId, event, normEvent.kind);
+    if (child) {
+      [agentId, agent] = child;
+      agent.hookDelivered = true;
+      this.noteEvent(agent, event);
+    }
     if (debug)
       console.log(
         `[Pixel Agents] Hook: Agent ${agentId} - ${eventName} (session=${event.session_id.slice(0, 8)}...)`,
@@ -384,9 +408,21 @@ export class HookEventHandler {
         // identical for both (agentToolDone + clear currentHookToolId), so one branch suffices.
         return this.handlePostToolUse(agent, agentId);
       case 'subagentStart':
-        return this.provider.team ? this.handleSubagentStart(event, agent, agentId) : undefined;
+        if (!this.provider.team) {
+          this.lifecycleCallbacks.onHookSubagentStart?.(
+            agentId,
+            normEvent.toolId,
+            normEvent.toolName,
+          );
+          return;
+        }
+        return this.handleSubagentStart(event, agent, agentId);
       case 'subagentEnd':
-        return this.provider.team ? this.handleSubagentStop(normEvent, agent, agentId) : undefined;
+        if (!this.provider.team) {
+          this.lifecycleCallbacks.onHookSubagentEnd?.(agentId, normEvent.toolId);
+          return;
+        }
+        return this.handleSubagentStop(normEvent, agent, agentId);
       case 'permissionRequest':
         // Handles BOTH the PermissionRequest hook AND the Notification(permission_prompt)
         // hook -- normalizeHookEvent collapses them into one event kind.
@@ -395,7 +431,9 @@ export class HookEventHandler {
         // Handles Stop AND Notification(idle_prompt) -- both normalize to turnEnd.
         // awaitingInput discriminates them: idle_prompt sets it (-> "Waiting for
         // input"), Stop leaves it absent (-> "Done").
-        return this.handleStop(agent, agentId, normEvent.awaitingInput === true);
+        this.handleStop(agent, agentId, normEvent.awaitingInput === true);
+        this.lifecycleCallbacks.onTurnEnd?.(agentId);
+        return;
       case 'subagentTurnEnd':
         // Handles TeammateIdle AND TaskCompleted -- both normalize here. The normalized
         // `reason` field discriminates; the team-provider's extractTeammateNameFromEvent(raw)
@@ -409,6 +447,32 @@ export class HookEventHandler {
         // Not yet consumed by the office visualization. Silently drop.
         return;
     }
+  }
+
+  /** Every delivered event: the agent was heard from now (residual clock),
+   *  and the hook script may have named the CLI's pid. */
+  private noteEvent(agent: AgentState, event: HookEvent): void {
+    agent.lastDataAt = Date.now();
+    const pid = reportedCliPid(event);
+    if (pid !== undefined) agent.processPid = pid;
+  }
+
+  /** The hook-announced sub-agent of `leadId` an event names in agent_id, if
+   *  it is one of its tool / turn events (its start and stop are the lead's). */
+  private hookSubagentOf(
+    leadId: number,
+    event: HookEvent,
+    kind: AgentEvent['kind'],
+  ): [number, AgentState] | undefined {
+    const key = event.agent_id;
+    if (typeof key !== 'string' || key === '') return undefined;
+    if (kind !== 'toolStart' && kind !== 'toolEnd' && kind !== 'permissionRequest') {
+      return undefined;
+    }
+    for (const [id, a] of this.agents) {
+      if (a.leadAgentId === leadId && a.hookSubagentId === key) return [id, a];
+    }
+    return undefined;
   }
 
   /**

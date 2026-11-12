@@ -53,8 +53,13 @@ export interface AgentState {
   /** Pixel Kaisha B2.3: a client put the agent in a meeting; activity does not
    *  move it until a setAgentRoom work/rest. Lost on restart. */
   roomPinned?: boolean;
-  /** Timestamp of last JSONL data received (ms since epoch) */
+  /** Timestamp of the last JSONL data or hook event received (ms since epoch).
+   *  0 = never stamped; the residual sweep stamps it on first sight (B2.5). */
   lastDataAt: number;
+  /** Pixel Kaisha B2.5: pid of the CLI process running this session, as its
+   *  hook script reported it (`cli_pid`). Alive = the session is live (never
+   *  residual); gone = its session is over. Persisted. */
+  processPid?: number;
   /** Total JSONL lines processed for this agent */
   linesProcessed: number;
   /** Set of record.type values we've already warned about (prevents log spam) */
@@ -111,6 +116,11 @@ export interface AgentState {
    *  tool_use id that spawned it. Links this character to the lead's
    *  backgroundSpawns entry so the queue-operation completion removes it. */
   spawnToolUseId?: string;
+  /** Pixel Kaisha B2.5: a hook-announced sub-agent (Codex SubagentStart), keyed
+   *  by the provider's sub-agent key. Its events name it explicitly, so it is
+   *  never an ambiguous inline teammate; it leaves on SubagentStop or with its
+   *  lead. Never persisted (it also sets spawnToolUseId). */
+  hookSubagentId?: string;
   /** Tool ids of spawn calls whose input carried a `name` — teammates-to-be.
    *  Every agentToolStart (re-)broadcast for these carries isTeammateSpawn so
    *  the webview never creates a Subtask ghost for them. Transient, lazily

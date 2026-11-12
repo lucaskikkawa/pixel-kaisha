@@ -210,6 +210,8 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
 
     // Create shared runtime (owns timer Maps, scanners, hook handler, dismissal tracker)
     this.runtime = new AgentRuntime(this.store, claudeProvider);
+    // Exited session-is-its-process CLIs and residual agents (Pixel Kaisha B2.5).
+    this.runtime.startLifecycleSweep();
 
     this.initServer();
   }

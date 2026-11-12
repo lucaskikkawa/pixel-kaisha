@@ -37,6 +37,14 @@ export const DISMISSED_COOLDOWN_MS = 180_000; // 3 minutes
 export const PAUSED_SPAWN_END_MS = 10 * 60_000;
 /** How often paused spawns are checked. */
 export const PAUSED_SPAWN_CHECK_INTERVAL_MS = 30_000;
+/** Pixel Kaisha B2.5 (residualAgents.ts): an agent with no event for longer
+ *  than this AND no live session or process is removed from the office. */
+export const RESIDUAL_IDLE_MS = 10 * 60_000;
+/** How often the runtime looks for residual agents. */
+export const RESIDUAL_SWEEP_INTERVAL_MS = 30_000;
+/** How often the runtime checks whether a session-is-its-process CLI (agy)
+ *  has exited: the character leaves within this of `agy -p` finishing. */
+export const PROCESS_EXIT_CHECK_INTERVAL_MS = 2_000;
 /** A paused agent's transcript gets its last records (the stop hook's) a
  *  moment before the notice lands; a write later than this after the notice
  *  means the agent resumed. */
