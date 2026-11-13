@@ -10,6 +10,7 @@ import { PixelIcon } from '../../components/ui/PixelIcon.js';
 import { castStore } from '../castStore.js';
 import { ArmedButton } from './ArmedButton.js';
 import { type CastActions, useCastActions } from './castActions.js';
+import { CharacterMemory } from './CharacterMemory.js';
 import type { SpriteView } from './pixelCanvas.js';
 import { SpriteCanvas } from './SpriteCanvas.js';
 import { useStudio } from './studio.js';
@@ -124,6 +125,7 @@ export function RosterPane() {
           Save roster .zip
         </ViewButton>
       </div>
+      <CharacterMemory key={cast.profiles[cast.current]?.id} />
     </section>
   );
 }
@@ -155,6 +157,7 @@ function MoreSheet({ onClose }: { onClose: () => void }) {
         <span>Tool</span>
         <ToolPicker profile={profile} index={cast.current} />
       </div>
+      <CharacterMemory key={profile.id} />
       <div className="chv-more-grid">
         <HistoryButtons />
         {ROSTER_ACTIONS.map((action) => (

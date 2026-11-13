@@ -194,9 +194,14 @@
   position: fixed;
   left: 10px;
   right: 10px;
-  z-index: 4;
+  z-index: 6;
   padding: 12px;
   bottom: calc(var(--dock-h, 92px) + 8px + env(safe-area-inset-bottom, 0px));
+  max-height: calc(100dvh - var(--dock-h, 92px) - 20px - env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+}
+.chv-more .chv-memory-result {
+  max-height: min(24dvh, 130px);
 }
 .chv-more-name {
   display: grid;
