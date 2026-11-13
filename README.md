@@ -10,7 +10,7 @@ Pixel Kaisha is a fork of [Pixel Agents](https://github.com/pixel-agents-hq/pixe
 
 - **Claude Code:** local sessions through hooks.
 - **Codex:** local sessions through hooks and Codex Cloud task status through polling.
-- **Antigravity (`agy`):** local sessions through hooks. Session-end handling remains a known limitation in v0.1.1.
+- **Antigravity (`agy`):** local sessions through hooks. A session ends on its `SessionEnd` hook and its character leaves the office.
 
 Cloud polling shows task status rather than a full live conversation. Availability depends on the corresponding tools and credentials being configured.
 
@@ -30,7 +30,7 @@ The intended setup is a visualizer running on a PC, with local CLI sessions and 
 ## Releases
 
 - **v0.1.0:** initial milestone with local providers, Codex Cloud polling and mobile layouts. [Tag](https://github.com/lucaskikkawa/pixel-kaisha/tree/v0.1.0).
-- **v0.1.1:** fixes for local session detection and the mobile cloud card layout. Antigravity session-end handling remains a known issue. [Release notes](https://github.com/lucaskikkawa/pixel-kaisha/releases/tag/v0.1.1).
+- **v0.1.1:** fixes for local session detection and the mobile cloud card layout. Antigravity session-end handling was a known issue in v0.1.1; it has since been fixed on `main` (B2.5, part of the upcoming v0.2). [Release notes](https://github.com/lucaskikkawa/pixel-kaisha/releases/tag/v0.1.1).
 
 ## Roadmap
 

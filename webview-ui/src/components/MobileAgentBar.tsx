@@ -97,7 +97,10 @@ export function MobileAgentBar({
     // iOS only claims the swipe gesture there. touch-pan-x: the bar scrolls
     // horizontally only; a vertical drag must not pan the page (iOS pans the
     // layout viewport while the keyboard is up).
-    <div className="relative shrink-0 bg-bg border-t-2 border-border touch-pan-x">
+    <div
+      data-bottom-chrome
+      className="relative shrink-0 bg-bg border-t-2 border-border touch-pan-x"
+    >
       <PhoneCharacterPicker
         isOpen={menus.isRosterOpen}
         containerRef={menus.rosterRef}

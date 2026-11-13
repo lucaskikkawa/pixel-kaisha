@@ -6,7 +6,7 @@ import { castStore } from '../castStore.js';
 import {
   CHARACTER_MEMORY_WARNINGS,
   normalizeMemoryPathInput,
-  requestCharacterMemory,
+  requestCharacterMemoryFromSaved,
 } from '../memory.js';
 import { useStudio } from './studio.js';
 import { ViewButton } from './ViewButton.js';
@@ -41,7 +41,10 @@ export function CharacterMemory() {
     if (!profile.id) return;
     setLoading(true);
     setReply(null);
-    transport.send(requestCharacterMemory(profile.id, path, profile.memoryPath));
+    // the draft already holds `path`: compare with the saved list, not the view's draft
+    transport.send(
+      requestCharacterMemoryFromSaved(profile.id, path, castStore.getState().profiles),
+    );
     if (new URLSearchParams(window.location.search).get('mock') === 'memory') {
       const warning = profile.name?.includes('Missing') ? 'not-found' : undefined;
       window.setTimeout(() => {

@@ -1,7 +1,17 @@
-import { useEffect } from 'react';
+import { type RefObject, useEffect, useRef, useState } from 'react';
 
 import type { AgentHistory as AgentHistoryMessage } from '../../../core/src/messages.js';
-import { chronologicalEntries } from './agentHistoryView.js';
+import {
+  CONTROL_RECTS_REFRESH_MS,
+  HISTORY_PANEL_CHROME_MIN_TOP_SHARE,
+  HISTORY_PANEL_CHROME_SELECTOR,
+  HISTORY_PANEL_EDGE_PX,
+} from '../constants.js';
+import {
+  type ChromeRect,
+  chronologicalEntries,
+  historyPanelBottomInset,
+} from './agentHistoryView.js';
 
 interface Props {
   history: AgentHistoryMessage | null;
@@ -12,6 +22,48 @@ interface Props {
   onClose: () => void;
   onEarlier: () => void;
   names: ReadonlyMap<number, string>;
+  /** The phone shell: the panel stays inside the viewport, above the bottom chrome. */
+  phone?: boolean;
+}
+
+/** The phone panel's bottom inset, re-measured as the chrome moves (roster, keyboard, rotation). */
+function useBottomInset(enabled: boolean, panel: RefObject<HTMLElement | null>): number {
+  const [inset, setInset] = useState<number>(HISTORY_PANEL_EDGE_PX);
+  useEffect(() => {
+    if (!enabled) return;
+    const measure = () => {
+      const chrome: ChromeRect[] = [];
+      for (const node of Array.from(
+        document.querySelectorAll<HTMLElement>(HISTORY_PANEL_CHROME_SELECTOR),
+      )) {
+        if (panel.current?.contains(node)) continue;
+        const r = node.getBoundingClientRect();
+        chrome.push({
+          top: r.top,
+          bottom: r.bottom,
+          left: r.left,
+          right: r.right,
+          marked: node.hasAttribute('data-bottom-chrome'),
+        });
+      }
+      const viewport = { width: window.innerWidth, height: window.innerHeight };
+      const next = historyPanelBottomInset(
+        viewport,
+        chrome,
+        HISTORY_PANEL_EDGE_PX,
+        HISTORY_PANEL_CHROME_MIN_TOP_SHARE,
+      );
+      setInset((current) => (current === next ? current : next));
+    };
+    measure();
+    const timer = window.setInterval(measure, CONTROL_RECTS_REFRESH_MS);
+    window.addEventListener('resize', measure);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('resize', measure);
+    };
+  }, [enabled, panel]);
+  return inset;
 }
 
 export function AgentHistoryPanel({
@@ -23,7 +75,10 @@ export function AgentHistoryPanel({
   onClose,
   onEarlier,
   names,
+  phone = false,
 }: Props) {
+  const panelRef = useRef<HTMLElement>(null);
+  const bottomInset = useBottomInset(phone, panelRef);
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
@@ -33,11 +88,22 @@ export function AgentHistoryPanel({
   }, [onClose]);
 
   const entries = history?.id === agentId ? chronologicalEntries(history.entries) : [];
+  // Phone: between the safe top and the bottom chrome (bottomInset), 8px from the sides;
+  // the overlay is centred in that band by its auto margins, up to 560px.
+  const placement = phone
+    ? mode === 'side'
+      ? 'fixed right-8 mobile-safe-top w-[min(380px,calc(100vw-16px))]'
+      : 'fixed left-8 right-8 mobile-safe-top m-auto max-h-[560px] max-w-[560px]'
+    : mode === 'side'
+      ? 'absolute right-8 top-8 bottom-8 w-[min(380px,calc(100%-16px))]'
+      : 'fixed left-1/2 top-1/2 h-[min(560px,calc(100dvh-16px))] w-[min(560px,calc(100vw-16px))] -translate-x-1/2 -translate-y-1/2';
   return (
     <section
+      ref={panelRef}
       aria-label={`${agentName} history`}
       data-testid="agent-history-panel"
-      className={`pixel-panel z-40 flex flex-col overflow-hidden ${mode === 'side' ? 'absolute right-8 top-8 bottom-8 w-[min(380px,calc(100%-16px))]' : 'fixed left-1/2 top-1/2 h-[min(560px,calc(100dvh-16px))] w-[min(560px,calc(100vw-16px))] -translate-x-1/2 -translate-y-1/2'}`}
+      className={`pixel-panel z-40 flex flex-col overflow-hidden ${placement}`}
+      style={phone ? { bottom: bottomInset } : undefined}
     >
       <header className="flex shrink-0 items-center gap-4 border-b-2 border-border p-8">
         <div className="min-w-0 flex-1">
