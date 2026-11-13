@@ -13,7 +13,7 @@ const rootDir = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   test: {
     environment: 'node',
-    include: ['test/*.test.ts'],
+    include: ['test/*.test.ts', 'test/*.test.tsx'],
     testTimeout: 30_000,
     // Tests bind fixed ports (Vite dev server, vite preview) and share the
     // global `window.postMessage` listener in browser-transport. Serial run

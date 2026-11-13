@@ -1,6 +1,6 @@
 # Pixel Kaisha
 
-**Status: under development.** Pixel Kaisha is a pixel-art office for observing AI coding agents as animated characters. *Kaisha* (会社) means “company” in Japanese.
+**Status: under development.** Pixel Kaisha is a pixel-art office for observing AI coding agents as animated characters. _Kaisha_ (会社) means “company” in Japanese.
 
 Pixel Kaisha is a fork of [Pixel Agents](https://github.com/pixel-agents-hq/pixel-agents) by pixel-agents-hq, distributed under the [MIT license](LICENSE). See the [upstream README](docs/UPSTREAM_README.md) for the original project.
 
@@ -36,11 +36,11 @@ The intended setup is a visualizer running on a PC, with local CLI sessions and 
 
 The following features are planned, not yet released:
 
-| Version | Goals |
-| --- | --- |
-| **v0.2 — living office** | Short speech and action bubbles without extra model calls; per-character and group history; work, meeting and rest rooms; character memory links and default tools; status panel and browser notifications; lifecycle fixes for Antigravity and Codex subagents. |
-| **v0.3 — projects and teams** | Projects and team organization, Scrum ceremonies, a prioritized task queue and continuous QA, per-character model configuration, remote notifications and PC migration after testing and review. |
-| **v0.4 — Google Docs** | Google Docs integration. |
+| Version                       | Goals                                                                                                                                                                                                                                                            |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **v0.2 — living office**      | Short speech and action bubbles without extra model calls; per-character and group history; work, meeting and rest rooms; character memory links and default tools; status panel and browser notifications; lifecycle fixes for Antigravity and Codex subagents. |
+| **v0.3 — projects and teams** | Projects and team organization, Scrum ceremonies, a prioritized task queue and continuous QA, per-character model configuration, remote notifications and PC migration after testing and review.                                                                 |
+| **v0.4 — Google Docs**        | Google Docs integration.                                                                                                                                                                                                                                         |
 
 ## License and credit
 
