@@ -11,6 +11,7 @@ Pixel Kaisha is a fork of [Pixel Agents](https://github.com/pixel-agents-hq/pixe
 
 ### Added
 
+- Open an agent's chronological speech and action history from the office in a side panel or overlay, including shared group entries and earlier pages.
 - A live agent status panel with provider, activity, tool, and elapsed-state time, plus opt-in browser notifications when an agent waits for input or finishes.
 
 ## [0.1.1] - 2026-11-10

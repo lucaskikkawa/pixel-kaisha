@@ -37,6 +37,7 @@ function dragMoveCursor(editorState: EditorState): string {
 interface OfficeCanvasProps {
   officeState: OfficeState;
   onClick: (agentId: number) => void;
+  onCharacterClick?: (agentId: number) => void;
   isEditMode: boolean;
   editorState: EditorState;
   onEditorTileAction: (col: number, row: number) => void;
@@ -65,6 +66,7 @@ interface OfficeCanvasProps {
 export function OfficeCanvas({
   officeState,
   onClick,
+  onCharacterClick,
   isEditMode,
   editorState,
   onEditorTileAction,
@@ -621,6 +623,7 @@ export function OfficeCanvas({
 
       const hitId = officeState.getCharacterAt(pos.worldX, pos.worldY);
       if (hitId !== null) {
+        onCharacterClick?.(hitId);
         // Dismiss any active bubble on click
         officeState.dismissBubble(hitId);
         // Two-step (mobile): first tap selects + follows so the status label
@@ -696,7 +699,7 @@ export function OfficeCanvas({
         officeState.cameraFollowId = null;
       }
     },
-    [officeState, onClick, screenToWorld, screenToTile, tapSelectsFirst],
+    [officeState, onClick, onCharacterClick, screenToWorld, screenToTile, tapSelectsFirst],
   );
 
   const handleClick = useCallback(
