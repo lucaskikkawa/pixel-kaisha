@@ -128,6 +128,7 @@ export function processTranscriptLine(
   const agent = agents.get(agentId);
   if (!agent) return;
   agent.lastDataAt = Date.now();
+  agent.turnUnobserved = undefined;
   agent.linesProcessed++;
   try {
     const record = JSON.parse(line);

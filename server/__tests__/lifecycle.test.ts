@@ -1,8 +1,10 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { StateAdapter } from '../../core/src/adapter.js';
+import type { PersistedAgent } from '../../core/src/schemas.js';
 import { agentCreatedMessage } from '../src/agentMessages.js';
 import { restoredAgentInit, toPersistedAgent } from '../src/agentPersistence.js';
 import { AgentRuntime } from '../src/agentRuntime.js';
@@ -49,8 +51,26 @@ interface World {
 
 let world: World | undefined;
 
-function makeWorld(): World {
+/** A StateAdapter that hands back `persisted` (in memory, no state file). */
+function memoryAdapter(persisted: PersistedAgent[]): StateAdapter {
+  let current = persisted;
+  return {
+    loadAgents: () => current,
+    saveAgents: (agents) => {
+      current = agents;
+    },
+    loadSeats: () => ({}),
+    saveSeats: () => {},
+    loadCardOrder: () => [],
+    saveCardOrder: () => {},
+    getSetting: <T>(_key: string, defaultValue: T): T => defaultValue,
+    setSetting: () => {},
+  };
+}
+
+function makeWorld(persisted?: PersistedAgent[]): World {
   const store = new AgentStateStore();
+  if (persisted) store.setAdapter(memoryAdapter(persisted));
   const alive = new Set<number>();
   const terminals = new Set<number>();
   const clock = { t: 1_800_000_000_000 };
@@ -416,6 +436,152 @@ describe('residual agents: >10 min without events AND no live session', () => {
     const persisted = toPersistedAgent(agent)!;
     expect(persisted.processPid).toBe(4321);
     expect(restoredAgentInit(persisted).processPid).toBe(4321);
+    // Both surfaces' restore (standalone and VS Code) start from this: no
+    // turn observed, since neither rereads the transcript.
+    expect(restoredAgentInit(persisted).turnUnobserved).toBe(true);
+  });
+});
+
+// ── 2b. The real restore (QA PR #31) ──────────────────────────────────────
+
+describe('restoreExternalAgents: a restored Claude transcript is not mid-turn', () => {
+  let tmpDir: string;
+  let jsonlFile: string;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kaisha-restore-'));
+    jsonlFile = path.join(tmpDir, 'claude-5.jsonl');
+    // Some old content: the restore starts at its end and never rereads it.
+    const old = [
+      { type: 'user', message: { role: 'user', content: 'old prompt' } },
+      {
+        type: 'assistant',
+        message: { role: 'assistant', content: [{ type: 'text', text: 'hi' }] },
+      },
+      { type: 'system', subtype: 'turn_duration', durationMs: 1000 },
+    ];
+    fs.writeFileSync(jsonlFile, old.map((r) => JSON.stringify(r)).join('\n') + '\n');
+  });
+
+  afterEach(() => {
+    // Dispose first (afterEach order: this file's hooks run before the
+    // top-level one); then the transcript can go.
+    world?.runtime.dispose();
+    world = undefined;
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  /** What the server really persists for an external transcript agent (QA's
+   *  "external agent 5": no pid, no terminal, no tools, no spawns). */
+  function persistedClaude(over: Partial<AgentState> = {}): PersistedAgent {
+    const live = createAgentState({
+      id: 5,
+      sessionId: 'claude-5',
+      isExternal: true,
+      projectDir: tmpDir,
+      jsonlFile,
+      providerId: 'claude',
+      ...over,
+    });
+    const p = toPersistedAgent(live)!;
+    expect(p).not.toHaveProperty('isWaiting');
+    return p;
+  }
+
+  function restore(persisted: PersistedAgent): { w: World; agent: AgentState } {
+    const w = makeWorld([persisted]);
+    w.runtime.restoreExternalAgents();
+    const agent = w.store.get(persisted.id)!;
+    expect(agent).toBeDefined();
+    expect(agent.hooksOnly).toBeFalsy();
+    expect(agent.processPid).toBe(persisted.processPid);
+    expect(agent.fileOffset).toBe(fs.statSync(jsonlFile).size);
+    expect(agent.linesProcessed).toBe(0);
+    expect(agent.lastDataAt).toBe(w.clock.t);
+    return { w, agent };
+  }
+
+  function opts(w: World) {
+    return {
+      isProcessAlive: (pid: number) => w.alive.has(pid),
+      hasLiveTerminal: (id: number) => w.terminals.has(id),
+    };
+  }
+
+  it('no live evidence: not an active session, and residual after 10 min + 1 ms', () => {
+    const { w, agent } = restore(persistedClaude());
+    // The restore asserts no turn: no turn flag, no tool, no spawn, and its
+    // isWaiting default is marked unobserved.
+    expect(agent.turnActive).toBeUndefined();
+    expect(agent.activeToolIds.size).toBe(0);
+    expect(agent.backgroundSpawns.size).toBe(0);
+    expect(agent.currentHookToolId).toBeUndefined();
+    expect(agent.isWaiting === true || agent.turnUnobserved === true).toBe(true);
+    expect(hasActiveSession(agent, opts(w))).toBe(false);
+
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      w.clock.t += RESIDUAL_IDLE_MS;
+      w.runtime.sweepResidualAgents();
+      expect(w.store.has(agent.id)).toBe(true);
+      expect(isResidualAgent(agent, w.clock.t, opts(w))).toBe(false);
+
+      w.clock.t += 1;
+      expect(isResidualAgent(agent, w.clock.t, opts(w))).toBe(true);
+      w.runtime.sweepResidualAgents();
+      expect(w.store.has(agent.id)).toBe(false);
+      expect(w.removed).toEqual([agent.id]);
+      expect(log).toHaveBeenCalledWith(
+        `[Pixel Agents] Agent ${agent.id}: residual (no event, no live session), removing`,
+      );
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  it('a live pid keeps the restored agent, however long', () => {
+    const { w, agent } = restore(persistedClaude({ processPid: 4242 }));
+    w.alive.add(4242);
+    w.clock.t += RESIDUAL_IDLE_MS + 1;
+    w.runtime.sweepResidualAgents();
+    w.clock.t += RESIDUAL_IDLE_MS * 12;
+    w.runtime.sweepResidualAgents();
+    expect(w.store.has(agent.id)).toBe(true);
+    expect(w.removed).toEqual([]);
+  });
+
+  it('a live terminal keeps the restored agent, however long', () => {
+    const { w, agent } = restore(persistedClaude());
+    w.terminals.add(agent.id);
+    w.clock.t += RESIDUAL_IDLE_MS + 1;
+    w.runtime.sweepResidualAgents();
+    w.clock.t += RESIDUAL_IDLE_MS * 12;
+    w.runtime.sweepResidualAgents();
+    expect(w.store.has(agent.id)).toBe(true);
+    expect(w.removed).toEqual([]);
+  });
+
+  it('a dead pid decides alone: residual after 10 min + 1 ms', () => {
+    const { w, agent } = restore(persistedClaude({ processPid: 4243 }));
+    w.clock.t += RESIDUAL_IDLE_MS + 1;
+    w.runtime.sweepResidualAgents();
+    expect(w.removed).toEqual([agent.id]);
+  });
+
+  it('a hook after the restore makes its turn state observed again', () => {
+    const { w, agent } = restore(persistedClaude());
+    w.runtime.handleHookEvent('claude', {
+      hook_event_name: 'PreToolUse',
+      session_id: agent.sessionId,
+      tool_name: 'Bash',
+      tool_input: { command: 'ls' },
+      tool_use_id: 'toolu_after_restore',
+    });
+    expect(agent.turnUnobserved).toBeUndefined();
+    expect(hasActiveSession(agent, opts(w))).toBe(true);
+    w.clock.t += RESIDUAL_IDLE_MS * 12;
+    w.runtime.sweepResidualAgents();
+    expect(w.store.has(agent.id)).toBe(true);
   });
 });
 

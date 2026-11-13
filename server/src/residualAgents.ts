@@ -44,6 +44,9 @@ export function pidAlive(pid: number): boolean {
  *   all there is. A turn in progress, a tool running or a background spawn =
  *   live; a finished turn (waiting) = no known session, so after
  *   RESIDUAL_IDLE_MS without a hook event or a transcript line it leaves.
+ *   A restored agent's `isWaiting: false` is the creation default, not an
+ *   observed turn (`turnUnobserved`, until its next line or hook), so it is
+ *   not mid-turn either.
  *   A live but quiet session with no known pid is indistinguishable from a
  *   dead one here, so it leaves too; its next hook event or transcript write
  *   can adopt it again (after the dismissal cooldown).
@@ -54,7 +57,7 @@ export function hasActiveSession(agent: AgentState, opts: ResidualOptions): bool
   if (agent.processPid !== undefined) return opts.isProcessAlive(agent.processPid);
   return (
     agent.turnActive === true ||
-    !agent.isWaiting ||
+    (!agent.isWaiting && !agent.turnUnobserved) ||
     agent.activeToolIds.size > 0 ||
     agent.backgroundSpawns.size > 0 ||
     agent.currentHookToolId !== undefined

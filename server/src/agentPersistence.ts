@@ -75,6 +75,9 @@ export function restoredAgentInit(p: PersistedAgent): Omit<AgentStateInit, 'isEx
     leadAgentId: p.leadAgentId,
     teamUsesTmux: p.teamUsesTmux,
     processPid: p.processPid,
+    // The transcript is not reread (watching starts at its end): no turn is
+    // known, though isWaiting stays false so the office shows it at rest.
+    turnUnobserved: true,
     palette: p.palette,
     repeat: p.repeat ?? legacyRepeat(p.clothesHue ?? p.hueShift),
   };

@@ -27,6 +27,11 @@ export interface AgentState {
    *  yet 'waiting'), so a connecting client is told too: a turn between two
    *  tools has no live tool to say so. Unset for an agent with no turn seen. */
   turnActive?: boolean;
+  /** Restored without rereading its transcript (it starts at end of file), so
+   *  `isWaiting: false` is the default, not an observed turn: the residual
+   *  sweep does not take it for one. Cleared by the next transcript line or
+   *  hook event. Never persisted. */
+  turnUnobserved?: boolean;
   permissionSent: boolean;
   hadToolsInTurn: boolean;
   /** Directory name — the agent's origin label (only set for multi-root workspaces) */
