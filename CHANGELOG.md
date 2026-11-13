@@ -9,11 +9,33 @@ Pixel Kaisha is a fork of [Pixel Agents](https://github.com/pixel-agents-hq/pixe
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-12
+
 ### Added
 
-- Speech and action balloons over the office characters, from the server's `agentSummary` (no model call in the UI). A hooks-only agent (Codex, agy) shows only its action. Balloons stay clear of the characters, labels and controls; on a 360×374 screen they are compact, with the full text as a tooltip. Dev mock: `?mock=summary`.
-- Open an agent's chronological speech and action history from the office in a side panel or overlay, including shared group entries and earlier pages.
-- A live agent status panel with provider, activity, tool, and elapsed-state time, plus opt-in browser notifications when an agent waits for input or finishes.
+- Speech and action balloons over the office characters, from the server's `agentSummary` (no model call in the UI). A hooks-only agent (Codex, agy) shows only its action. Balloons stay clear of the characters, labels and controls; on a 360×374 screen they are compact, with the full text as a tooltip. Dev mock: `?mock=summary` ([#23](https://github.com/lucaskikkawa/pixel-kaisha/pull/23)).
+- Open an agent's chronological speech and action history from the office in a side panel or overlay, including shared group entries and earlier pages ([#21](https://github.com/lucaskikkawa/pixel-kaisha/pull/21), [#28](https://github.com/lucaskikkawa/pixel-kaisha/pull/28)).
+- A live agent status panel with provider, activity, tool, and elapsed-state time, plus opt-in browser notifications when an agent waits for input or finishes ([#27](https://github.com/lucaskikkawa/pixel-kaisha/pull/27)).
+- Server-side agent summaries provide speech and current action without an additional model call ([#19](https://github.com/lucaskikkawa/pixel-kaisha/pull/19)).
+- Work, meeting, and rest rooms reflect agent activity, with navigation in the office ([#25](https://github.com/lucaskikkawa/pixel-kaisha/pull/25), [#29](https://github.com/lucaskikkawa/pixel-kaisha/pull/29)).
+- A memory path can be saved per character and its contents viewed read-only ([#25](https://github.com/lucaskikkawa/pixel-kaisha/pull/25), [#30](https://github.com/lucaskikkawa/pixel-kaisha/pull/30)).
+- A default tool can be selected and saved per character ([#20](https://github.com/lucaskikkawa/pixel-kaisha/pull/20)).
+
+### Changed
+
+- Refreshed the README with the current architecture, technologies, and roadmap ([#26](https://github.com/lucaskikkawa/pixel-kaisha/pull/26)).
+- Improved stale-agent cleanup and Codex subagent lifecycle handling ([#25](https://github.com/lucaskikkawa/pixel-kaisha/pull/25)).
+
+### Fixed
+
+- Antigravity (`agy`) sessions now close on SessionEnd ([#25](https://github.com/lucaskikkawa/pixel-kaisha/pull/25)).
+
+### Known issues
+
+- The README still lists Antigravity SessionEnd as a limitation (outdated).
+- "Show memory" on an unsaved draft does not use the new path; "not found" only appears after Save.
+- `?mock=history` with a live server at 412×915 and 360×374 shows "History unavailable (unknown-agent)".
+- A restored Claude transcript agent stays in the office for 10+ minutes (non-hooks agents are treated as always having an active session).
 
 ## [0.1.1] - 2026-11-10
 
