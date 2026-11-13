@@ -39,17 +39,19 @@ export function pidAlive(pid: number): boolean {
  *   its lifetime.
  * - A known CLI pid decides alone: running = live, gone = over (a turn the
  *   dead process left "active" is not a session any more).
- * - No pid, hooks-only agent (old hook script, or not Linux): the turn state
- *   is all there is. A turn in progress, a tool running or a background spawn
- *   = live; a finished turn (waiting) = no known session.
- * - No pid, transcript agent: nothing tells a quiet session from a dead one,
- *   so it is kept (the stale check drops it once its transcript is gone).
+ * - No pid (a hooks-only agent from an old hook script or not on Linux, or a
+ *   transcript agent restored or adopted from its jsonl): the turn state is
+ *   all there is. A turn in progress, a tool running or a background spawn =
+ *   live; a finished turn (waiting) = no known session, so after
+ *   RESIDUAL_IDLE_MS without a hook event or a transcript line it leaves.
+ *   A live but quiet session with no known pid is indistinguishable from a
+ *   dead one here, so it leaves too; its next hook event or transcript write
+ *   can adopt it again (after the dismissal cooldown).
  */
 export function hasActiveSession(agent: AgentState, opts: ResidualOptions): boolean {
   if (!agent.isExternal) return true;
   if (agent.terminalRef || opts.hasLiveTerminal?.(agent.id)) return true;
   if (agent.processPid !== undefined) return opts.isProcessAlive(agent.processPid);
-  if (!agent.hooksOnly) return true;
   return (
     agent.turnActive === true ||
     !agent.isWaiting ||

@@ -42,6 +42,8 @@ interface World {
   removed: number[];
   added: AgentState[];
   alive: Set<number>;
+  /** Agents the host holds a live terminal (PTY) for. */
+  terminals: Set<number>;
   clock: { t: number };
 }
 
@@ -50,10 +52,12 @@ let world: World | undefined;
 function makeWorld(): World {
   const store = new AgentStateStore();
   const alive = new Set<number>();
+  const terminals = new Set<number>();
   const clock = { t: 1_800_000_000_000 };
   const runtime = new AgentRuntime(store, claudeProvider, {
     now: () => clock.t,
     isProcessAlive: (pid) => alive.has(pid),
+    hasLiveTerminal: (id) => terminals.has(id),
   });
   runtime.setHookProviders(hookProviders);
   // Adopt every session (the tracked-cwd gate is tested elsewhere).
@@ -63,7 +67,7 @@ function makeWorld(): World {
   // agentRemoved is what the server sends to every office as agentClosed.
   store.on('agentRemoved', (id) => removed.push(id));
   store.on('agentAdded', (_id, a) => added.push(a));
-  world = { store, runtime, removed, added, alive, clock };
+  world = { store, runtime, removed, added, alive, terminals, clock };
   return world;
 }
 
@@ -273,7 +277,7 @@ describe('residual agents: >10 min without events AND no live session', () => {
     expect(w.removed.sort()).toEqual([lead.id, child.id].sort());
   });
 
-  it('never residual: launched agents, terminals, children, transcript agents of unknown pid', () => {
+  it('never residual: launched agents, terminals, children, an agent between clears', () => {
     const base = createAgentState({
       id: 1,
       sessionId: 's',
@@ -291,9 +295,113 @@ describe('residual agents: >10 min without events AND no live session', () => {
     expect(isResidualAgent(base, now, { ...opts, hasLiveTerminal: () => true })).toBe(false);
     expect(isResidualAgent({ ...base, leadAgentId: 9 }, now, opts)).toBe(false);
     expect(isResidualAgent({ ...base, pendingClear: true }, now, opts)).toBe(false);
-    const transcript = { ...base, hooksOnly: false, jsonlFile: '/t.jsonl' };
-    expect(hasActiveSession(transcript, opts)).toBe(true);
+    for (const over of [{ isExternal: false }, { leadAgentId: 9 }, { pendingClear: true }]) {
+      const transcript = { ...base, hooksOnly: false, jsonlFile: '/t.jsonl', ...over };
+      expect(isResidualAgent(transcript, now, opts)).toBe(false);
+    }
+  });
+
+  it('transcript agent of unknown pid follows the residual rule; a dead pid decides alone', () => {
+    const transcript = createAgentState({
+      id: 1,
+      sessionId: 's',
+      isExternal: true,
+      projectDir: '/p',
+      jsonlFile: '/t.jsonl',
+      hooksOnly: false,
+      isWaiting: true,
+      lastDataAt: 1,
+    });
+    const now = 1 + RESIDUAL_IDLE_MS + 1;
+    const opts = { isProcessAlive: () => false };
+    expect(hasActiveSession(transcript, opts)).toBe(false);
+    expect(isResidualAgent(transcript, now, opts)).toBe(true);
+    expect(isResidualAgent(transcript, now - 1, opts)).toBe(false);
+    expect(isResidualAgent({ ...transcript, lastDataAt: 0 }, now, opts)).toBe(false);
     expect(isResidualAgent({ ...transcript, processPid: 5 }, now, opts)).toBe(true);
+    // A turn the dead process left "active" is not a session.
+    expect(
+      isResidualAgent(
+        { ...transcript, processPid: 5, isWaiting: false, turnActive: true },
+        now,
+        opts,
+      ),
+    ).toBe(true);
+  });
+
+  describe('restored Claude transcript agent (QA v0.2.0, ressalva 4)', () => {
+    function transcriptAgent(w: World, over: Partial<AgentState> = {}): AgentState {
+      const id = w.store.nextAgentId.current++;
+      const agent = createAgentState({
+        id,
+        sessionId: `claude-${id}`,
+        isExternal: true,
+        projectDir: '/sandbox',
+        jsonlFile: `/sandbox/claude-${id}.jsonl`,
+        hooksOnly: false,
+        providerId: 'claude',
+        isWaiting: true,
+        lastDataAt: w.clock.t,
+        ...over,
+      });
+      w.store.set(id, agent);
+      return agent;
+    }
+
+    it('no live session: removed (agentClosed) after 10 min + 1 ms, not at exactly 10 min', () => {
+      const w = makeWorld();
+      const a = transcriptAgent(w);
+      const opts = { isProcessAlive: (pid: number) => w.alive.has(pid) };
+      expect(hasActiveSession(a, opts)).toBe(false);
+      w.clock.t += RESIDUAL_IDLE_MS;
+      w.runtime.sweepResidualAgents();
+      expect(w.store.has(a.id)).toBe(true);
+      w.clock.t += 1;
+      expect(isResidualAgent(a, w.clock.t, opts)).toBe(true);
+      w.runtime.sweepResidualAgents();
+      expect(w.removed).toEqual([a.id]);
+    });
+
+    it('the restore stamps the idle clock: 10 min of grace from the restore', () => {
+      const w = makeWorld();
+      const a = transcriptAgent(w, { lastDataAt: 0 });
+      w.runtime.sweepResidualAgents(); // restore-time stamp
+      expect(a.lastDataAt).toBe(w.clock.t);
+      w.clock.t += RESIDUAL_IDLE_MS;
+      w.runtime.sweepResidualAgents();
+      expect(w.store.has(a.id)).toBe(true);
+      w.clock.t += 1;
+      w.runtime.sweepResidualAgents();
+      expect(w.removed).toEqual([a.id]);
+    });
+
+    it('a live session never leaves: live pid, live terminal, active turn or tool', () => {
+      const w = makeWorld();
+      const livePid = transcriptAgent(w, { processPid: 990 });
+      w.alive.add(990);
+      const terminal = transcriptAgent(w);
+      const turn = transcriptAgent(w, { isWaiting: false, turnActive: true });
+      const tool = transcriptAgent(w, { isWaiting: false });
+      tool.activeToolIds.add('toolu_1');
+      const hookTool = transcriptAgent(w, { currentHookToolId: 'hook-1' });
+      const spawn = transcriptAgent(w);
+      spawn.backgroundSpawns.set('toolu_bg', { taskId: 'task-1' });
+      w.terminals.add(terminal.id);
+      const live = [livePid, terminal, turn, tool, hookTool, spawn];
+      const opts = {
+        isProcessAlive: (pid: number) => w.alive.has(pid),
+        hasLiveTerminal: (id: number) => w.terminals.has(id),
+      };
+      w.clock.t += RESIDUAL_IDLE_MS + 1;
+      w.runtime.sweepResidualAgents();
+      w.clock.t += RESIDUAL_IDLE_MS * 12;
+      w.runtime.sweepResidualAgents();
+      expect(w.removed).toEqual([]);
+      for (const a of live) {
+        expect(hasActiveSession(a, opts)).toBe(true);
+        expect(w.store.has(a.id)).toBe(true);
+      }
+    });
   });
 
   it('the restore gives a 10 min grace and keeps the pid', () => {
