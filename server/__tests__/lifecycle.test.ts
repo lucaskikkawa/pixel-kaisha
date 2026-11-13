@@ -4,7 +4,7 @@ import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { agentCreatedMessage } from '../src/agentMessages.js';
-import { restoredAgentInit,toPersistedAgent } from '../src/agentPersistence.js';
+import { restoredAgentInit, toPersistedAgent } from '../src/agentPersistence.js';
 import { AgentRuntime } from '../src/agentRuntime.js';
 import { createAgentState } from '../src/agentState.js';
 import { AgentStateStore } from '../src/agentStateStore.js';

@@ -14,6 +14,7 @@ import { forgetAgentProvider, setAgentProvider } from '../cloud/engineBadge.js';
 import { cardOrderOf } from '../components/cardBar.js';
 import { playDoneSound, playPermissionSound, setSoundEnabled } from '../notificationSound.js';
 import { clearAgentContextUsed, setAgentContextUsed } from '../office/contextGauge.js';
+import { applySummarySnapshot } from '../office/engine/agentSummary.js';
 import type { ExistingAgentMeta, PendingAgent } from '../office/engine/existingAgents.js';
 import {
   reconcileExistingAgents,
@@ -476,6 +477,10 @@ export function useExtensionMessages(
             os.setHeadless(id, true);
           }
         }
+        // Pixel Kaisha F2.1: present only when the server already holds a summary.
+        if ('speech' in msg || 'action' in msg) {
+          os.setAgentSummary(id, { speech: msg.speech, action: msg.action });
+        }
         saveAgentSeats(os);
       } else if (msg.type === 'agentClosed') {
         forgetAgentProvider(msg.id as number);
@@ -491,6 +496,8 @@ export function useExtensionMessages(
         const externalAgents = (msg.externalAgents || {}) as Record<number, boolean>;
         const providerIds = (msg.providerIds || {}) as Record<number, string>;
         for (const id of incoming) setAgentProvider(id, providerIds[id]);
+        // Pixel Kaisha F2.1: balloon text (speech + action) of every listed agent.
+        applySummarySnapshot(os, incoming, msg.summaries);
         const headlessAgents: Record<number, boolean> = {};
         for (const id of incoming) {
           noteDirectoryName(directoryNames[id]);
@@ -930,6 +937,9 @@ export function useExtensionMessages(
           msg.leadAgentId as number | undefined,
           msg.teamUsesTmux as boolean | undefined,
         );
+      } else if (msg.type === 'agentSummary') {
+        // Pixel Kaisha F2.1: a full snapshot of the agent's balloon text.
+        os.setAgentSummary(msg.id as number, { speech: msg.speech, action: msg.action });
       } else if (msg.type === 'agentContextUsage') {
         const id = msg.id as number;
         os.setAgentContext(id, msg.contextTokens as number, msg.maxContextTokens as number);

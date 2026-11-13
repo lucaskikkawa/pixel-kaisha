@@ -238,6 +238,22 @@ export const TOOL_OVERLAY_VERTICAL_OFFSET = 32;
 /** CSS px between the label's bottom and the sprite's top edge (or the bubble
  *  over it). Negative: most hair stops a little below that edge. */
 export const TOOL_OVERLAY_GAP_PX = -2;
+/** Pixel Kaisha F2.1: the speech/action balloon over a character's head. Its
+ *  width caps (CSS px): the agent in focus (wrapped speech), every other one
+ *  (compact, one line per row), and any balloon on a short (~360×374) screen. */
+export const SUMMARY_BALLOON_MAX_WIDTH_PX = 220;
+export const SUMMARY_BALLOON_COMPACT_MAX_WIDTH_PX = 168;
+export const SUMMARY_BALLOON_SHORT_MAX_WIDTH_PX = 132;
+/** Lines of speech before an ellipsis (the full text is the balloon's title). */
+export const SUMMARY_BALLOON_SPEECH_LINES = 2;
+/** CSS px between the balloon and what it sits on (the head, a bubble or the label),
+ *  and its margin from the office's edges. */
+export const SUMMARY_BALLOON_GAP_PX = 2;
+/** How far (tiles) a balloon may rise to clear a colleague, and its rise step (CSS px). */
+export const SUMMARY_BALLOON_MAX_LIFT_TILES = 3;
+export const SUMMARY_BALLOON_STEP_PX = 4;
+/** How often (ms) the balloons re-read where the UI over the office sits. */
+export const CONTROL_RECTS_REFRESH_MS = 250;
 
 // ── Greeter + Intro bubble ──────────────────────────────────
 /** Reserved character id for the Intro's greeter. Far outside both real agent

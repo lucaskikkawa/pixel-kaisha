@@ -38,6 +38,8 @@ import type {
   TileType as TileTypeVal,
 } from '../types.js';
 import { CharacterState, Direction, PetState, TILE_SIZE } from '../types.js';
+import type { AgentSummaryInput, AgentSummaryText } from './agentSummary.js';
+import { readAgentSummary } from './agentSummary.js';
 import { tickBlink } from './blink.js';
 import { createCharacter, restInChair, updateCharacter, updateHelper } from './characters.js';
 import { advanceMatrixEffect, startMatrixEffect } from './matrixEffectState.js';
@@ -84,6 +86,10 @@ export class OfficeState {
   furniture: FurnitureInstance[];
   walkableTiles: Array<{ col: number; row: number }>;
   characters: Map<number, Character> = new Map();
+  /** Pixel Kaisha F2.1: each agent's balloon text (speech + action) as the
+   *  server last sent it. Keyed by agent id, not on the Character, because a
+   *  restore snapshot can carry it before the layout lets the character in. */
+  agentSummaries: Map<number, AgentSummaryText> = new Map();
   pets: Pet[] = [];
   /** Accumulated time for furniture animation frame cycling */
   furnitureAnimTimer = 0;
@@ -605,6 +611,7 @@ export class OfficeState {
   }
 
   removeAgent(id: number): void {
+    this.agentSummaries.delete(id);
     const ch = this.characters.get(id);
     if (!ch) return;
     if (ch.matrixEffect === 'despawn') return; // already despawning
@@ -1183,6 +1190,20 @@ export class OfficeState {
     const ch = this.characters.get(id);
     if (!ch) return;
     ch.isHeadless = headless;
+  }
+
+  /** Replace an agent's balloon text with a server snapshot (a whole snapshot:
+   *  `speech: ''` hides the speech, `action: null` the action; nothing left
+   *  clears the balloon). The text is kept exactly as sent. */
+  setAgentSummary(id: number, input: AgentSummaryInput | null | undefined): void {
+    const summary = readAgentSummary(input);
+    if (summary) this.agentSummaries.set(id, summary);
+    else this.agentSummaries.delete(id);
+  }
+
+  /** The agent's balloon text, or null when it has none. */
+  getAgentSummary(id: number): AgentSummaryText | null {
+    return this.agentSummaries.get(id) ?? null;
   }
 
   setAgentContext(id: number, contextTokens: number, maxContextTokens: number): void {
