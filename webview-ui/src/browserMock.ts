@@ -229,7 +229,17 @@ export function dispatchMockMessages(): void {
   // Must match the load order defined in CLAUDE.md:
   // characterProfilesLoaded -> characterSpritesLoaded -> floorTilesLoaded -> wallTilesLoaded
   //   -> carpetTilesLoaded -> furnitureAssetsLoaded -> layoutLoaded
-  dispatch({ type: 'characterProfilesLoaded', profiles: DEFAULT_CHARACTER_PROFILES });
+  // `?mock=memory` gives the Characters editor a valid fixture path and a second,
+  // missing path; CharacterMemory returns short local fixtures without a server.
+  const memoryMock = new URLSearchParams(window.location.search).get('mock') === 'memory';
+  const mockProfiles = memoryMock
+    ? DEFAULT_CHARACTER_PROFILES.map((profile, index) => ({
+        ...profile,
+        ...(index === 0 ? { memoryPath: '~/work/pixel-kaisha/CLAUDE.md' } : {}),
+        ...(index === 1 ? { name: 'Missing memory', memoryPath: '~/work/missing/AGENTS.md' } : {}),
+      }))
+    : DEFAULT_CHARACTER_PROFILES;
+  dispatch({ type: 'characterProfilesLoaded', profiles: mockProfiles });
   dispatch({ type: 'characterSpritesLoaded', characters: [] });
   dispatch({ type: 'floorTilesLoaded', sprites: floorSprites });
   dispatch({ type: 'wallTilesLoaded', sets: wallSets });

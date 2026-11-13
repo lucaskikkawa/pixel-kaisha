@@ -709,8 +709,55 @@
 .chv-roster {
   padding: 12px;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
   gap: 10px;
+}
+.chv-memory {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  color: var(--color-text);
+  font-size: 13px;
+}
+.chv-memory-path {
+  display: grid;
+  gap: 3px;
+  color: var(--color-text-muted-solid);
+}
+.chv-memory-path input {
+  width: 100%;
+  min-width: 0;
+  padding: 5px 7px;
+  background: var(--color-bg-dark);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-size: 13px;
+}
+.chv-memory-path input::placeholder {
+  opacity: 0.75;
+}
+.chv-memory .chv-btn {
+  justify-self: start;
+}
+.chv-memory-warning {
+  margin: 0;
+  color: var(--color-warning, var(--color-text));
+}
+.chv-memory-result {
+  max-height: 130px;
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-dark);
+  padding: 6px;
+}
+.chv-memory-result p {
+  margin: 0 0 4px;
+}
+.chv-memory-result pre {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
 }
 .chv-rail {
   display: grid;
