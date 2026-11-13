@@ -246,6 +246,40 @@ export function dispatchMockMessages(): void {
   dispatch({ type: 'carpetTilesLoaded', sets: carpetSets });
   dispatch({ type: 'furnitureAssetsLoaded', catalog: furnitureCatalog, sprites: furnitureSprites });
   dispatch({ type: 'layoutLoaded', layout });
+  if (new URLSearchParams(window.location.search).get('mock') === 'history') {
+    dispatch({
+      type: 'existingAgents',
+      agents: [],
+      agentMeta: {},
+      directoryNames: {},
+      externalAgents: {},
+    });
+    dispatch({
+      type: 'agentCreated',
+      id: 1,
+      directoryName: 'History Demo',
+      providerId: 'claude',
+      palette: 0,
+    });
+    dispatch({
+      type: 'agentCreated',
+      id: 2,
+      directoryName: 'History Demo',
+      providerId: 'codex',
+      palette: 1,
+      isTeammate: true,
+      parentAgentId: 1,
+      teamName: 'Kaisha Web',
+      teammateName: 'Codex',
+    });
+    dispatch({
+      type: 'agentCreated',
+      id: 3,
+      directoryName: 'History Demo',
+      providerId: 'agy',
+      palette: 2,
+    });
+  }
   dispatch({
     type: 'settingsLoaded',
     soundEnabled: false,
