@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { agentEngineBadge } from '../../cloud/engineBadge.js';
+import { transport } from '../../transport/index.js';
 import { formatElapsed, stateStartedAt } from '../agentStatusRow.js';
 import type { OfficeState } from '../engine/officeState.js';
+import { setAgentRoomMessage } from '../engine/roomProtocol.js';
 
 function statusLine(ch: ReturnType<OfficeState['characters']['get']>) {
   if (!ch) return { state: 'Idle', tool: '—' };
@@ -25,12 +27,16 @@ export function AgentStatusPanel({
   agentTools,
   agentStatuses,
   agentAwaitingInput,
+  agentRooms,
+  readOnly,
 }: {
   officeState: OfficeState;
   agents: number[];
   agentTools: Record<number, { status: string; done: boolean }[]>;
   agentStatuses: Record<number, string>;
   agentAwaitingInput: Record<number, boolean>;
+  agentRooms: Record<number, 'work' | 'meeting' | 'rest'>;
+  readOnly: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [now, setNow] = useState(0);
@@ -86,18 +92,19 @@ export function AgentStatusPanel({
           aria-label="Agent status"
         >
           <h2 className="mb-8 text-sm">Agent status</h2>
-          <div className="grid grid-cols-[minmax(50px,1fr)_48px_minmax(78px,1.1fr)_minmax(70px,1.3fr)_42px] gap-x-6 border-b border-border pb-4 text-text-muted">
+          <div className="grid grid-cols-[minmax(45px,1fr)_35px_minmax(62px,1fr)_minmax(50px,1fr)_34px_42px] gap-x-6 border-b border-border pb-4 text-text-muted">
             <span>Name</span>
             <span>Source</span>
             <span>State</span>
             <span>Tool</span>
             <span>Time</span>
+            <span>Room</span>
           </div>
           {rows.length ? (
             rows.map((row) => (
               <div
                 key={row.id}
-                className="grid grid-cols-[minmax(50px,1fr)_48px_minmax(78px,1.1fr)_minmax(70px,1.3fr)_42px] gap-x-6 border-b border-border py-5"
+                className="grid grid-cols-[minmax(45px,1fr)_35px_minmax(62px,1fr)_minmax(50px,1fr)_34px_42px] gap-x-6 border-b border-border py-5"
               >
                 {[row.name, row.source, row.state, row.tool, row.age].map((value, i) => (
                   <span
@@ -108,6 +115,22 @@ export function AgentStatusPanel({
                     {value}
                   </span>
                 ))}
+                <button
+                  type="button"
+                  disabled={readOnly}
+                  className="text-accent disabled:opacity-50"
+                  title={agentRooms[row.id] === 'meeting' ? 'Release meeting' : 'Send to meeting'}
+                  onClick={() =>
+                    transport.send(
+                      setAgentRoomMessage(
+                        row.id,
+                        agentRooms[row.id] === 'meeting' ? 'work' : 'meeting',
+                      ),
+                    )
+                  }
+                >
+                  {agentRooms[row.id] === 'meeting' ? 'Release' : 'Meet'}
+                </button>
               </div>
             ))
           ) : (

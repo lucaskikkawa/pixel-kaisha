@@ -43,6 +43,7 @@ import { useMobileShell } from './mobile/useMobileShell.js';
 import { MusicPlayer } from './music/MusicPlayer.js';
 import { AgentStatusPanel } from './office/components/AgentStatusPanel.js';
 import { OfficeCanvas } from './office/components/OfficeCanvas.js';
+import { RoomNavigation } from './office/components/RoomNavigation.js';
 import { ToolOverlay } from './office/components/ToolOverlay.js';
 import { EditorState } from './office/editor/editorState.js';
 import { EditorToolbar } from './office/editor/EditorToolbar.js';
@@ -106,6 +107,7 @@ function App() {
     agentTools,
     agentStatuses,
     agentAwaitingInput,
+    agentRooms,
     agentSeenActivity,
     subagentTools,
     subagentCharacters,
@@ -572,6 +574,12 @@ function App() {
         activeAreaLabel={activeAreaLabel}
         tapSelectsFirst={isMobile}
       />
+      <RoomNavigation
+        officeState={officeState}
+        panRef={editor.panRef}
+        zoom={editor.zoom}
+        containerRef={containerRef}
+      />
 
       {!isDebugMode ? (
         <>
@@ -775,6 +783,8 @@ function App() {
           agentTools={agentTools}
           agentStatuses={agentStatuses}
           agentAwaitingInput={agentAwaitingInput}
+          agentRooms={agentRooms}
+          readOnly={officeReadOnly}
         />
       )}
 

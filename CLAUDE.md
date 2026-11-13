@@ -453,6 +453,8 @@ Layout and character-profile writes go through ONE `writeJsonAtomic` (tmp + rena
 
 ## Agent Status Tracking
 
+The office follows the additive `AgentRoom` protocol (`work`, `meeting`, `rest`): snapshots and `agentRoom` updates position characters, while the client sends `setAgentRoom` to hold/release meeting. The bundled default office includes a separate quiet lounge; `?mock=rooms` previews all three rooms.
+
 JSONL transcripts at `~/.claude/projects/<project-hash>/<session-id>.jsonl`. Project hash = workspace path with `:`/`\`/`/` → `-`.
 
 **JSONL record types**: `assistant` (tool_use or thinking), `user` (tool_result or text prompt), `system` with `subtype: "turn_duration"` (reliable turn-end signal), `progress` with `data.type`: `agent_progress` (sub-agent tool_use/tool_result, non-exempt tools trigger permission timers), `bash_progress` (Bash output — restarts permission timer), `mcp_progress` (MCP tool — same timer restart). Also observed but not tracked: `file-history-snapshot`, `queue-operation`.

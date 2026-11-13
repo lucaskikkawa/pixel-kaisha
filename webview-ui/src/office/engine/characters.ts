@@ -130,6 +130,16 @@ export function updateCharacter(
     case CharacterState.IDLE: {
       // No idle animation — static pose
       ch.frame = 0;
+      // Room presence is server-authored. Keep an idle character in its
+      // assigned lounge/meeting spot instead of the office-wide wander loop.
+      if (ch.room && ch.room !== 'work') {
+        if (ch.isActive) {
+          ch.state = CharacterState.TYPE;
+          ch.frame = 0;
+          ch.frameTimer = 0;
+        }
+        break;
+      }
       if (ch.seatTimer < 0) ch.seatTimer = 0; // clear turn-end sentinel
       // If became active, pathfind to seat
       if (ch.isActive) {
@@ -228,7 +238,9 @@ export function updateCharacter(
         ch.x = center.x;
         ch.y = center.y;
 
-        if (ch.isActive) {
+        if (ch.isActive && ch.room && ch.room !== 'work') {
+          ch.state = CharacterState.TYPE;
+        } else if (ch.isActive) {
           if (!ch.seatId) {
             // No seat — type in place
             ch.state = CharacterState.TYPE;
@@ -276,7 +288,7 @@ export function updateCharacter(
       stepAlongPath(ch, dt);
 
       // If became active while wandering, repath to seat
-      if (ch.isActive && ch.seatId) {
+      if (ch.isActive && ch.seatId && (!ch.room || ch.room === 'work')) {
         const seat = seats.get(ch.seatId);
         if (seat) {
           const lastStep = ch.path[ch.path.length - 1];

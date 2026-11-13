@@ -177,6 +177,8 @@ export interface Blinker {
 
 export interface Character extends Blinker {
   id: number;
+  /** Server-authoritative office room. */
+  room?: 'work' | 'meeting' | 'rest';
   state: CharacterState;
   dir: Direction;
   /** Pixel position */

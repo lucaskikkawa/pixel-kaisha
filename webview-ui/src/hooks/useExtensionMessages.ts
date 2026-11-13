@@ -22,6 +22,7 @@ import {
 } from '../office/engine/existingAgents.js';
 import type { OfficeState } from '../office/engine/officeState.js';
 import { setGhostHeadlessAgents as setRendererGhostHeadlessAgents } from '../office/engine/renderer.js';
+import { isAgentRoom } from '../office/engine/roomProtocol.js';
 import { setFloorSprites } from '../office/floorTiles.js';
 import { buildDynamicCatalog } from '../office/layout/furnitureCatalog.js';
 import { migrateLayoutColors } from '../office/layout/layoutSerializer.js';
@@ -105,6 +106,7 @@ interface ExtensionMessageState {
   agentTools: Record<number, ToolActivity[]>;
   agentStatuses: Record<number, string>;
   agentAwaitingInput: Record<number, boolean>;
+  agentRooms: Record<number, 'work' | 'meeting' | 'rest'>;
   /** Latch: true once an agent has had any activity (first tool or status). */
   agentSeenActivity: Record<number, boolean>;
   subagentTools: Record<number, Record<string, ToolActivity[]>>;
@@ -199,6 +201,7 @@ export function useExtensionMessages(
   const [agentTools, setAgentTools] = useState<Record<number, ToolActivity[]>>({});
   const [agentStatuses, setAgentStatuses] = useState<Record<number, string>>({});
   const [agentAwaitingInput, setAgentAwaitingInput] = useState<Record<number, boolean>>({});
+  const [agentRooms, setAgentRooms] = useState<Record<number, 'work' | 'meeting' | 'rest'>>({});
   const [agentSeenActivity, setAgentSeenActivity] = useState<Record<number, boolean>>({});
   const noticeStatesRef = useRef<Record<number, 'waiting' | 'done' | 'other'>>({});
   const markSeenActivity = (id: number) =>
@@ -302,6 +305,7 @@ export function useExtensionMessages(
       unmarkTeammate(id);
       setAgentTools((prev) => omitKey(prev, id));
       setAgentStatuses((prev) => omitKey(prev, id));
+      setAgentRooms((prev) => omitKey(prev, id));
       setAgentSeenActivity((prev) => omitKey(prev, id));
       setSubagentTools((prev) => omitKey(prev, id));
       // Remove all sub-agent characters belonging to this agent
@@ -476,6 +480,15 @@ export function useExtensionMessages(
             os.setHeadless(id, true);
           }
         }
+        if (isAgentRoom(msg.room)) {
+          const room = msg.room;
+          if (room === 'rest') {
+            os.setAgentActive(id, false);
+            os.restAgent(id);
+          }
+          os.setAgentRoom(id, room);
+          setAgentRooms((prev) => ({ ...prev, [id]: room }));
+        }
         saveAgentSeats(os);
       } else if (msg.type === 'agentClosed') {
         forgetAgentProvider(msg.id as number);
@@ -490,6 +503,7 @@ export function useExtensionMessages(
         const directoryNames = (msg.directoryNames || {}) as Record<number, string>;
         const externalAgents = (msg.externalAgents || {}) as Record<number, boolean>;
         const providerIds = (msg.providerIds || {}) as Record<number, string>;
+        const rooms = (msg.rooms || {}) as Record<number, 'work' | 'meeting' | 'rest'>;
         for (const id of incoming) setAgentProvider(id, providerIds[id]);
         const headlessAgents: Record<number, boolean> = {};
         for (const id of incoming) {
@@ -509,9 +523,17 @@ export function useExtensionMessages(
             layoutReadyRef.current,
             pendingAgents,
             headlessAgents,
+            rooms,
           )
         ) {
           saveAgentSeats(os);
+        }
+        if (msg.rooms && typeof msg.rooms === 'object') {
+          for (const id of incoming) {
+            const room = rooms[id];
+            if (isAgentRoom(room)) os.setAgentRoom(id, room);
+          }
+          setAgentRooms(Object.fromEntries(incoming.map((id) => [id, rooms[id] ?? 'rest'])));
         }
         setAgents((prev) => {
           const ids = new Set(prev);
@@ -636,6 +658,13 @@ export function useExtensionMessages(
       } else if (msg.type === 'agentSelected') {
         const id = msg.id as number;
         setSelectedAgent(id);
+      } else if (msg.type === 'agentRoom') {
+        const id = msg.id as number;
+        const room = msg.room as 'work' | 'meeting' | 'rest';
+        if (isAgentRoom(room)) {
+          os.setAgentRoom(id, room);
+          setAgentRooms((prev) => ({ ...prev, [id]: room }));
+        }
       } else if (msg.type === 'agentStatus') {
         const id = msg.id as number;
         const status = msg.status as string;
@@ -974,6 +1003,7 @@ export function useExtensionMessages(
     agentTools,
     agentStatuses,
     agentAwaitingInput,
+    agentRooms,
     agentSeenActivity,
     subagentTools,
     subagentCharacters,
