@@ -11,7 +11,6 @@ Pixel Kaisha is a fork of [Pixel Agents](https://github.com/pixel-agents-hq/pixe
 
 ### Added
 
-- Work, meeting, and rest room presence follows the server room protocol; room navigation, meeting controls, and the `?mock=rooms` fixture are available in the office.
 - A live agent status panel with provider, activity, tool, and elapsed-state time, plus opt-in browser notifications when an agent waits for input or finishes.
 
 ## [0.1.1] - 2026-11-10
