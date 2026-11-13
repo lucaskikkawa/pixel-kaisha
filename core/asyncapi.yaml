@@ -102,6 +102,12 @@ components:
         - $ref: '#/components/schemas/AgentContextUsage'
         # Balloon summary (Pixel Kaisha B2.1)
         - $ref: '#/components/schemas/AgentSummary'
+        # Rooms / presence (Pixel Kaisha B2.3)
+        - $ref: '#/components/schemas/AgentRoomUpdate'
+        # Per-agent history (Pixel Kaisha B2.2)
+        - $ref: '#/components/schemas/AgentHistory'
+        # Character memory (Pixel Kaisha B2.4)
+        - $ref: '#/components/schemas/CharacterMemory'
         # Layout
         - $ref: '#/components/schemas/LayoutLoaded'
         # Assets
@@ -150,6 +156,7 @@ components:
         - $ref: '#/components/schemas/SaveAgentSeats'
         - $ref: '#/components/schemas/SaveLayout'
         - $ref: '#/components/schemas/SaveCharacterProfiles'
+        - $ref: '#/components/schemas/SetCharacterDefaultTool'
         - $ref: '#/components/schemas/SetSoundEnabled'
         - $ref: '#/components/schemas/SetLastSeenVersion'
         - $ref: '#/components/schemas/SetAlwaysShowLabels'
@@ -176,6 +183,12 @@ components:
         - $ref: '#/components/schemas/RequestConversations'
         - $ref: '#/components/schemas/SearchConversations'
         - $ref: '#/components/schemas/ResumeConversation'
+        # Per-agent history (Pixel Kaisha B2.2)
+        - $ref: '#/components/schemas/RequestAgentHistory'
+        # Character memory (Pixel Kaisha B2.4)
+        - $ref: '#/components/schemas/RequestCharacterMemory'
+        # Rooms / presence (Pixel Kaisha B2.3)
+        - $ref: '#/components/schemas/SetAgentRoom'
         - $ref: '#/components/schemas/RequestDiagnostics'
       discriminator: type
 
@@ -244,6 +257,11 @@ components:
           description: >-
             Pixel Kaisha B2.1. Current action summary; null = no active tool.
             Absent together with speech when the agent has no summary yet.
+        room:
+          $ref: '#/components/schemas/AgentRoom'
+          description: >-
+            Pixel Kaisha B2.3 (docs/kaisha/protocol-rooms.md). The room the
+            agent is in. A new agent starts in rest. Absent from older servers.
 
     CloudAgents:
       description: >-
@@ -354,6 +372,13 @@ components:
             are listed; missing entries mean no summary yet.
           additionalProperties:
             $ref: '#/components/schemas/AgentSummarySnapshot'
+        rooms:
+          type: object
+          description: >-
+            Pixel Kaisha B2.3 (docs/kaisha/protocol-rooms.md). Map of agent ID
+            (string) to the room it is in. Every agent is listed.
+          additionalProperties:
+            $ref: '#/components/schemas/AgentRoom'
 
     AgentStatus:
       description: Active vs waiting state for an agent (drives character animation).
@@ -587,6 +612,162 @@ components:
           type: string
         action:
           type: [string, 'null']
+
+    AgentHistory:
+      description: >-
+        Pixel Kaisha B2.2 (docs/kaisha/protocol-history.md). One page of an
+        agent's ordered conversation and action history, oldest first. Sent
+        point-to-point to a privileged client in reply to
+        `requestAgentHistory` (never broadcast); it may quote the user.
+      type: object
+      additionalProperties: false
+      required: [type, id, entries]
+      properties:
+        type:
+          const: agentHistory
+        id:
+          type: integer
+        sessionId:
+          type: string
+        entries:
+          type: array
+          description: Chronological (oldest first).
+          items:
+            $ref: '#/components/schemas/AgentHistoryEntry'
+        more:
+          type: boolean
+          description: True when older entries exist past this page.
+        group:
+          $ref: '#/components/schemas/AgentHistoryGroup'
+        reason:
+          type: string
+          description: >-
+            Why the page is empty: 'unknown-agent' (no such agent in the
+            office) or 'invalid-request' (malformed id, limit or before).
+            Absent on success.
+
+    AgentHistoryEntry:
+      description: One speech or action of an agent's history.
+      type: object
+      additionalProperties: false
+      required: [ts, kind, text]
+      properties:
+        ts:
+          type: number
+          description: Epoch ms.
+        kind:
+          $ref: '#/components/schemas/HistoryEntryKind'
+        text:
+          type: string
+          description: Already cut (speech 500, action 120 code points).
+        role:
+          $ref: '#/components/schemas/HistoryEntryRole'
+        toolName:
+          type: string
+          description: Only for kind 'action'.
+        shared:
+          type: boolean
+          description: True when the entry belongs to a shared team session.
+        authorAgentId:
+          type: integer
+          description: Agent id of the author when known (lead or teammate).
+        teamName:
+          type: string
+          description: Team name, when shared.
+
+    HistoryEntryKind:
+      type: string
+      enum: [speech, action]
+
+    HistoryEntryRole:
+      type: string
+      description: Only for kind 'speech'.
+      enum: [user, assistant]
+
+    AgentHistoryGroup:
+      description: >-
+        The team session the agent is (or was) in: its lead and the agents
+        currently in the office that share it.
+      type: object
+      additionalProperties: false
+      required: [memberAgentIds]
+      properties:
+        teamName:
+          type: string
+        leadAgentId:
+          type: integer
+        memberAgentIds:
+          type: array
+          items:
+            type: integer
+
+    AgentRoom:
+      description: >-
+        Pixel Kaisha B2.3 (docs/kaisha/protocol-rooms.md). The office room an
+        agent is in: work (active, or waiting on the user at its desk), rest
+        (idle), meeting (chosen by a client; stays until a client moves it
+        out or the agent closes).
+      type: string
+      enum: [work, meeting, rest]
+
+    DefaultTool:
+      description: >-
+        Pixel Kaisha B2.4 (docs/kaisha/protocol-default-tool.md, Front PR #20).
+        A character's default provider. Absent or unknown values are treated
+        as claude and never refuse the profile.
+      type: string
+      enum: [claude, codex, agy]
+
+    AgentRoomUpdate:
+      description: >-
+        Pixel Kaisha B2.3 (docs/kaisha/protocol-rooms.md). An agent moved to
+        another room. Broadcast only when the room changes: from activity
+        (agentStatus) while the agent is not held in a meeting, or from a
+        client's setAgentRoom.
+      type: object
+      additionalProperties: false
+      required: [type, id, room]
+      properties:
+        type:
+          const: agentRoom
+        id:
+          type: integer
+        room:
+          $ref: '#/components/schemas/AgentRoom'
+
+    CharacterMemory:
+      description: >-
+        Pixel Kaisha B2.4 (docs/kaisha/protocol-memory.md). The content of a
+        character's memory, read only, in reply to `requestCharacterMemory`
+        (never broadcast). `content` or `warning` is set (a folder past the
+        cap has both: the files that fit, and 'too-large'); a missing or
+        unreadable path is a warning, never an error.
+      type: object
+      additionalProperties: false
+      required: [type, profileId, path]
+      properties:
+        type:
+          const: characterMemory
+        profileId:
+          type: string
+        path:
+          type: string
+          description: The resolved path that was tried ('~' expanded); '' when there was none.
+        content:
+          type: string
+          description: >-
+            UTF-8 text (at most 256 KiB). For a folder, its files joined by
+            '\n\n--- <name> ---\n\n'; '' for a folder with none.
+        warning:
+          type: string
+          description: >-
+            Why there is no content: 'not-found', 'not-a-file', 'too-large',
+            'unreadable', 'no-path', 'invalid-path' or 'unknown-profile'.
+        files:
+          type: array
+          description: For a folder, the file names read, in order.
+          items:
+            type: string
 
     LayoutLoaded:
       description: |
@@ -1437,6 +1618,20 @@ components:
           items:
             $ref: '#/components/schemas/WardrobeItem'
 
+    SetCharacterDefaultTool:
+      description: Set the default provider for one character profile. Privileged clients only.
+      type: object
+      additionalProperties: false
+      required: [type, profileId, providerId]
+      properties:
+        type:
+          const: setCharacterDefaultTool
+        profileId:
+          type: string
+          description: The character profile's permanent id.
+        providerId:
+          $ref: '#/components/schemas/DefaultTool'
+
     SetSoundEnabled:
       type: object
       additionalProperties: false
@@ -1752,6 +1947,68 @@ components:
         type:
           const: requestDirectorySuggestions
 
+    RequestAgentHistory:
+      description: >-
+        Pixel Kaisha B2.2 (docs/kaisha/protocol-history.md). Ask for one page
+        of an agent's history; the host replies `agentHistory` to this client
+        only. Privileged clients only (a read-only client gets no reply).
+      type: object
+      additionalProperties: false
+      required: [type, id]
+      properties:
+        type:
+          const: requestAgentHistory
+        id:
+          type: integer
+          description: The agent's id in the office.
+        before:
+          type: number
+          description: >-
+            Exclusive upper bound: return entries with ts < before (epoch ms).
+            For pagination.
+        limit:
+          type: integer
+          description: Max entries to return (default 100, hard cap 500).
+
+    SetAgentRoom:
+      description: >-
+        Pixel Kaisha B2.3 (docs/kaisha/protocol-rooms.md). Move an agent to a
+        room. meeting holds it there (activity no longer moves it) until a
+        setAgentRoom with work or rest, or until it closes; work or rest
+        release the hold and the room then follows activity again (recomputed
+        at once). An unknown agent or room is ignored. Privileged clients only
+        (a read-only client is sent the agent's current room back).
+      type: object
+      additionalProperties: false
+      required: [type, id, room]
+      properties:
+        type:
+          const: setAgentRoom
+        id:
+          type: integer
+          description: The agent's id in the office.
+        room:
+          $ref: '#/components/schemas/AgentRoom'
+
+    RequestCharacterMemory:
+      description: >-
+        Pixel Kaisha B2.4 (docs/kaisha/protocol-memory.md). Ask to read a
+        character's memory file or folder; the host replies `characterMemory`
+        to this client only. Read only: the server never writes the memory.
+        Privileged clients only (a read-only client gets no reply).
+      type: object
+      additionalProperties: false
+      required: [type, profileId]
+      properties:
+        type:
+          const: requestCharacterMemory
+        profileId:
+          type: string
+          description: The character profile's id.
+        path:
+          type: string
+          description: Optional override; default is the path stored on the profile.
+
     RequestConversations:
       description: >-
         Ask for the sidebar's recent conversations; the host replies
@@ -2024,6 +2281,18 @@ components:
         v:
           type: number
           description: Profile format version (older versions are migrated on read).
+        memoryPath:
+          type: string
+          description: |
+            Pixel Kaisha B2.4 (docs/kaisha/protocol-memory.md). Path of the character's tool
+            memory (a CLAUDE.md, AGENTS.md or GEMINI.md file, or a
+            ~/.claude/projects/<proj>/memory/ folder): absolute, or '~' / '~/...'. Only the
+            path is stored; the content is read on request (`requestCharacterMemory`), never
+            written. Absent = none. Blank, too long (> 1024) or not a string is dropped on
+            save without refusing the profile.
+        defaultTool:
+          $ref: '#/components/schemas/DefaultTool'
+          description: Default provider for this character; absent or unknown values use claude.
 
     AgentLook:
       description: An agent's look (see agentCreated.palette and repeat).

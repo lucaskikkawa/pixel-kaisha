@@ -104,6 +104,7 @@ webview-ui/                          React 19 + Canvas UI (depends only on core/
     App.tsx                          Composition root (hooks + components + EditActionBar)
     constants.ts                     Webview magic numbers/strings
     notificationSound.ts             Web Audio API chime
+    agentNotifications.ts             Browser notification preference, permission, and transition helpers
     changelogData.ts                 Changelog modal content
     components/                      React UI (toolbars, modals, settings)
       BottomToolbar.tsx, ZoomControls.tsx, SettingsModal.tsx, InfoModal.tsx,
@@ -127,7 +128,7 @@ webview-ui/                          React 19 + Canvas UI (depends only on core/
       MobileTerminalPage.tsx         Mobile terminal page (a TerminalPaneStack)
       MobileKeyBar.tsx               Accessory keys above the software keyboard (/, tab, shift+tab, the square arrow trackpad centred on the bar, esc, forward del, line break)
     usage/                           UsageBars (top-left, no panel: heart + weekly bar over an equal 5-hour bar, % inside each; hover/tap any of it = the heart beats and each bar's reset time shows right of it) + PixelHeart (multi-colour art through PixelSvg + pixelGrid `colorRuns`; the beat flashes a one-pixel-bigger frame) (numbers through PixelText) + usageBarView (pure: share left, colour band, reset-since-report = full, heartbeat period, freshness) + usageStore (each provider's usageBridgeStatus/usageLimits outside React; `seq` counts status arrivals) + useUsageBridge (status, limits, this caller's `pending` request — answered by the next ARRIVAL, since a failed install re-reports the same value — and `setEnabled`; read by the Intro, Settings and App)
-    conversations/                   ConversationList (shared body) in ConversationSidebar (desktop, left, shown and hidden from the zoom stack, slides with useSlidePanel, Settings at its foot; open/shut in useConversationSidebar) and MobileConversations (phone, History panel); useConversations (requestConversations while open, with the sections' "Show more" limits) + timeAgo; ConversationSearch (App-level modal: the list's search field and Recent's "See all" open it on every Directory, a section's "See all" on that one, a chip widening it; `searchConversations` by title on the server, debounced, a page of `CONVERSATION_SEARCH_PAGE` at a time as it scrolls)
+    conversations/                   ConversationList (shared body) in ConversationSidebar (desktop, left, shown and hidden from the zoom stack, slides with useSlidePanel, Settings at its foot; open/shut in useConversationSidebar) and MobileConversations (phone, History panel); useConversations (requestConversations while open, with the sections' "Show more" limits) + timeAgo; ConversationSearch (App-level modal: the list's search field and Recent's "See all" open it on every Directory, a section's "See all" on that one, a chip widening it; `searchConversations` by title on the server, debounced, a page of `CONVERSATION_SEARCH_PAGE` at a time as it scrolls); AgentHistoryPanel (F2.2 `requestAgentHistory` on character click; shared entries, earlier pages, side/overlay presentation)
     music/                           The office radio (see "Office radio"): procedural 8-bit tunes, DOM-free composer, one Web Audio player
       composer.ts                    makeSong: one tune as steps for the four Game Boy channels (pure, seeded); the melody, harmony, bass and drum writers
       rng.ts, moods.ts               The seeded stream (Rng, newSeed); the moods and their theory tables (MOOD_KEYS, MOODS, scales, progressions, forms) + chooseMood (Auto)
@@ -227,6 +228,7 @@ webview-ui/                          React 19 + Canvas UI (depends only on core/
         useCanvasTouchGestures.ts    Touch pan / pinch zoom / tap on the canvas
         ToolOverlay.tsx              Activity label + speech bubbles (DOM, above the labels) per character
         SummaryBalloon.tsx           Pixel Kaisha F2.1: the speech/action balloon (server text as sent; a row only when it has text; compact unless its agent is in focus)
+      AgentStatusPanel.tsx         Live agent roster with state, provider, active tool, and elapsed time
 
 e2e/                                 Playwright suite (real VS Code + mock-claude scenarios)
   playwright.config.ts

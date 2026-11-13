@@ -26,6 +26,9 @@ export type ServerMessage =
   | AgentTeamInfo
   | AgentContextUsage
   | AgentSummary
+  | AgentRoomUpdate
+  | AgentHistory
+  | CharacterMemory
   | LayoutLoaded
   | FurnitureAssetsLoaded
   | CharacterProfilesLoaded
@@ -65,6 +68,7 @@ export type ClientMessage =
   | SaveAgentSeats
   | SaveLayout
   | SaveCharacterProfiles
+  | SetCharacterDefaultTool
   | SetSoundEnabled
   | SetLastSeenVersion
   | SetAlwaysShowLabels
@@ -91,6 +95,9 @@ export type ClientMessage =
   | RequestConversations
   | SearchConversations
   | ResumeConversation
+  | RequestAgentHistory
+  | RequestCharacterMemory
+  | SetAgentRoom
   | RequestDiagnostics;
 
 export interface ProviderCapabilities {
@@ -110,7 +117,10 @@ export interface AgentCreated {
   seatId?: string;
   speech?: string;
   action?: string | null;
+  room?: AgentRoom;
 }
+
+export type AgentRoom = 'work' | 'meeting' | 'rest';
 
 export interface AgentClosed {
   type: 'agentClosed';
@@ -130,6 +140,7 @@ export interface ExistingAgents {
   externalAgents: Record<string, boolean>;
   providerIds?: Record<string, string>;
   summaries?: Record<string, AgentSummarySnapshot>;
+  rooms?: Record<string, AgentRoom>;
 }
 
 export interface AgentSeatMeta {
@@ -235,6 +246,52 @@ export interface AgentSummary {
   action: string | null;
 }
 
+export interface AgentRoomUpdate {
+  type: 'agentRoom';
+  id: number;
+  room: AgentRoom;
+}
+
+export interface AgentHistory {
+  type: 'agentHistory';
+  id: number;
+  sessionId?: string;
+  entries: AgentHistoryEntry[];
+  more?: boolean;
+  group?: AgentHistoryGroup;
+  reason?: string;
+}
+
+export interface AgentHistoryEntry {
+  ts: number;
+  kind: HistoryEntryKind;
+  text: string;
+  role?: HistoryEntryRole;
+  toolName?: string;
+  shared?: boolean;
+  authorAgentId?: number;
+  teamName?: string;
+}
+
+export type HistoryEntryKind = 'speech' | 'action';
+
+export type HistoryEntryRole = 'user' | 'assistant';
+
+export interface AgentHistoryGroup {
+  teamName?: string;
+  leadAgentId?: number;
+  memberAgentIds: number[];
+}
+
+export interface CharacterMemory {
+  type: 'characterMemory';
+  profileId: string;
+  path: string;
+  content?: string;
+  warning?: string;
+  files?: string[];
+}
+
 export interface LayoutLoaded {
   type: 'layoutLoaded';
   layout: Record<string, any> | null;
@@ -303,6 +360,8 @@ export interface CharacterProfile {
   colors?: Record<string, CharacterColor>;
   edits?: Record<string, CharacterPixelEdits>;
   v?: number;
+  memoryPath?: string;
+  defaultTool?: DefaultTool;
 }
 
 export interface CharacterColor {
@@ -317,6 +376,8 @@ export interface CharacterColor {
 export interface CharacterPixelEdits {
   cells: Record<string, Record<string, string | null>>;
 }
+
+export type DefaultTool = 'claude' | 'codex' | 'agy';
 
 export interface AgentLook {
   id: number;
@@ -604,6 +665,12 @@ export interface SaveCharacterProfiles {
   items?: WardrobeItem[];
 }
 
+export interface SetCharacterDefaultTool {
+  type: 'setCharacterDefaultTool';
+  profileId: string;
+  providerId: DefaultTool;
+}
+
 export interface SetSoundEnabled {
   type: 'setSoundEnabled';
   enabled: boolean;
@@ -745,6 +812,25 @@ export interface ResumeConversation {
   type: 'resumeConversation';
   sessionId: string;
   directoryPath: string;
+}
+
+export interface RequestAgentHistory {
+  type: 'requestAgentHistory';
+  id: number;
+  before?: number;
+  limit?: number;
+}
+
+export interface RequestCharacterMemory {
+  type: 'requestCharacterMemory';
+  profileId: string;
+  path?: string;
+}
+
+export interface SetAgentRoom {
+  type: 'setAgentRoom';
+  id: number;
+  room: AgentRoom;
 }
 
 export interface RequestDiagnostics {

@@ -1,55 +1,47 @@
 # Pixel Kaisha
 
-**Status: under development**
+**Status: under development.** Pixel Kaisha is a pixel-art office for observing AI coding agents as animated characters. _Kaisha_ (会社) means “company” in Japanese.
 
-Pixel Kaisha is a pixel-art office that shows AI coding agents at work. Each agent appears as a character in a tiny office: they sit at their desks, type when they edit files, read when they search, and visually flag when they need input.
-
-**Kaisha** (会社) is the Japanese word for *company*. The name is a reminder that these agents are the project's staff, visible together in one shared workplace.
-
-This project is a public fork of **[Pixel Agents](https://github.com/pixel-agents-hq/pixel-agents)** by [pixel-agents-hq](https://github.com/pixel-agents-hq), released under the [MIT License](LICENSE). The upstream project is the original pixel office; Pixel Kaisha builds on that foundation. The original upstream README is preserved at [`docs/UPSTREAM_README.md`](docs/UPSTREAM_README.md).
+Pixel Kaisha is a fork of [Pixel Agents](https://github.com/pixel-agents-hq/pixel-agents) by pixel-agents-hq, distributed under the [MIT license](LICENSE). See the [upstream README](docs/UPSTREAM_README.md) for the original project.
 
 ![Pixel Agents office](webview-ui/public/office.png)
 
-## Planned engines
+## Agent engines
 
-Pixel Kaisha aims to support the following engines (work in progress; not all of these are available yet):
+- **Claude Code:** local sessions through hooks.
+- **Codex:** local sessions through hooks and Codex Cloud task status through polling.
+- **Antigravity (`agy`):** local sessions through hooks. Session-end handling remains a known limitation in v0.1.1.
 
-- **Claude Code** — local CLI sessions, with optional later support for Claude Code cloud events via repository hooks
-- **Codex** — local CLI sessions, plus **Codex Cloud** via polling (`codex cloud list` and related commands)
-- **Antigravity (`agy`)** — local sessions, with a later phase for remote-agent streaming
+Cloud polling shows task status rather than a full live conversation. Availability depends on the corresponding tools and credentials being configured.
 
-Upstream Pixel Agents supports Claude Code today, with other engines on its own roadmap. This fork focuses on the engines listed above.
+## Architecture and stack
 
-## Architecture
+The project uses TypeScript and Node.js (20 or later), Fastify and WebSockets for the server, and React, Vite and CSS for the webview. The browser interface includes a PWA manifest. The VS Code adapter and browser server share core types and messages.
 
-- **Visualizer** — the office UI runs on a Windows PC (local server, no paid host required). Opening the office in a browser on that machine is the primary desktop view.
-- **Agents** — agents run in the vendors' own clouds (for example Codex Cloud) and, when useful, as local CLIs on the same PC. Cloud tasks are reflected in the office through a poller that maps task status into the existing agent events.
-- **Android** — the same office is available as a PWA, reached through a free private tunnel while the PC is on. With the PC off or asleep, the PWA can show only a cached last-known state.
+- [`core/src/`](core/src/) — shared schemas, messages and provider interfaces.
+- [`server/src/providers/hook/`](server/src/providers/hook/) — local agent providers and hook integrations for Claude, Codex and Antigravity.
+- [`server/src/`](server/src/) — server, event handling, agent state and client communication; [`cli.ts`](server/src/cli.ts) is the CLI entry point.
+- [`server/src/cloudPoller.ts`](server/src/cloudPoller.ts) and [`server/src/providers/poll/codexCloud/`](server/src/providers/poll/codexCloud/) — cloud polling and the Codex Cloud provider.
+- [`webview-ui/src/`](webview-ui/src/) — React office and browser UI; [`webview-ui/public/manifest.webmanifest`](webview-ui/public/manifest.webmanifest) provides PWA metadata.
+- [`adapters/vscode/`](adapters/vscode/) — VS Code extension integration.
 
-A public ingest route for live hook events (for example Claude Code cloud repository hooks) is optional and not required for the polling-based cloud view.
+The intended setup is a visualizer running on a PC, with local CLI sessions and supported cloud tasks represented in the office. The browser UI also targets mobile devices; remote access and PC migration are planned work.
+
+## Releases
+
+- **v0.1.0:** initial milestone with local providers, Codex Cloud polling and mobile layouts. [Tag](https://github.com/lucaskikkawa/pixel-kaisha/tree/v0.1.0).
+- **v0.1.1:** fixes for local session detection and the mobile cloud card layout. Antigravity session-end handling remains a known issue. [Release notes](https://github.com/lucaskikkawa/pixel-kaisha/releases/tag/v0.1.1).
 
 ## Roadmap
 
-Phases below are the intended path for this fork. They are under development and may change.
+The following features are planned, not yet released:
 
-| Phase | Goal |
-|---|---|
-| **F0** | Project name, public fork, and documentation (this repository). |
-| **F1** | Office running on Windows; local Claude Code agents visible; Android PWA over a private tunnel. |
-| **F2** | Local providers for Codex and Antigravity (`agy`). |
-| **F3** | Generic cloud poller and Codex Cloud support (status and summaries, cloud-tagged characters). |
-| **F4** (optional) | Restricted public ingest for repository hooks and store-and-forward hook queues, so live events can arrive when a tunnel is enabled. |
-| **F5** | Antigravity remote-agent stream, plus launching a cloud agent from the office. |
-| **F6** | Android offline last-known state, Web Push (while the PC is on), compact mobile layout, and starting the office server automatically with Windows. |
-
-An early usable milestone is the end of F3: local agents plus Codex Cloud visible on the desktop and, with the PC on, on the phone.
+| Version                       | Goals                                                                                                                                                                                                                                                            |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **v0.2 — living office**      | Short speech and action bubbles without extra model calls; per-character and group history; work, meeting and rest rooms; character memory links and default tools; status panel and browser notifications; lifecycle fixes for Antigravity and Codex subagents. |
+| **v0.3 — projects and teams** | Projects and team organization, Scrum ceremonies, a prioritized task queue and continuous QA, per-character model configuration, remote notifications and PC migration after testing and review.                                                                 |
+| **v0.4 — Google Docs**        | Google Docs integration.                                                                                                                                                                                                                                         |
 
 ## License and credit
 
-Pixel Kaisha is distributed under the MIT License. See [LICENSE](LICENSE).
-
-This repository is a fork of [pixel-agents-hq/pixel-agents](https://github.com/pixel-agents-hq/pixel-agents) (MIT). Upstream copyright and license notices are kept intact. Please credit and follow the original project as well as this fork.
-
-Pixel art in the upstream project is based on the work of [JIK-A-4, Metro City](https://jik-a-4.itch.io/metrocity-free-topdown-character-pack).
-
-To use the original Pixel Agents CLI or VS Code extension, see the [upstream repository](https://github.com/pixel-agents-hq/pixel-agents) and [`docs/UPSTREAM_README.md`](docs/UPSTREAM_README.md).
+Pixel Kaisha and its upstream foundation are distributed under the [MIT license](LICENSE). Pixel art in the upstream project is based on [JIK-A-4's Metro City character pack](https://jik-a-4.itch.io/metrocity-free-topdown-character-pack).

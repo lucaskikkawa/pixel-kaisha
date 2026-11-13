@@ -3,7 +3,7 @@ import {
   characterRemap,
   parseCharacterProfiles,
 } from '../../core/src/characterProfiles.js';
-import type { AgentLook, CharacterProfilesLoaded } from '../../core/src/messages.js';
+import type { AgentLook, CharacterProfilesLoaded, DefaultTool } from '../../core/src/messages.js';
 import { parseWardrobeItems, type WardrobeItem } from '../../core/src/wardrobeItems.js';
 import type { AgentStateStore } from './agentStateStore.js';
 import {
@@ -135,6 +135,40 @@ export function handleCharacterProfilesClientMessage(
   const sharedChanged = saved.remap ? remapSharedCharacterRefs(saved.remap) : false;
   deps.broadcast(characterProfilesLoadedMessage(saveId, saved.profiles, saved.items, looks));
   if (sharedChanged) deps.sharedRefsChanged();
+}
+
+/** Update one character's default provider and persist the same profile snapshot. */
+export function setCharacterDefaultTool(
+  profileId: unknown,
+  providerId: unknown,
+  broadcast: (message: ProfilesMessage) => void,
+): void {
+  const tool: DefaultTool | undefined =
+    providerId === 'claude' || providerId === 'codex' || providerId === 'agy'
+      ? providerId
+      : undefined;
+  if (typeof profileId !== 'string' || tool === undefined) {
+    return;
+  }
+  const profiles = getCharacterProfiles();
+  const index = profiles.findIndex((profile) => profile.id === profileId);
+  if (index < 0) return;
+  const next = profiles.map((profile, i) => {
+    if (i !== index) return profile;
+    const updated = { ...profile };
+    if (tool === 'claude') delete updated.defaultTool;
+    else updated.defaultTool = tool;
+    return updated;
+  });
+  try {
+    const filePath = characterProfilesFile.path();
+    writeJsonAtomic(filePath, next);
+    characterProfilesFile.set(next, filePath);
+  } catch (err) {
+    console.error('[Pixel Agents] Failed to write character default tool:', err);
+    return;
+  }
+  broadcast(characterProfilesLoadedMessage(undefined, next));
 }
 
 /**

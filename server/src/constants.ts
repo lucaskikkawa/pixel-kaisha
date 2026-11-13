@@ -37,6 +37,14 @@ export const DISMISSED_COOLDOWN_MS = 180_000; // 3 minutes
 export const PAUSED_SPAWN_END_MS = 10 * 60_000;
 /** How often paused spawns are checked. */
 export const PAUSED_SPAWN_CHECK_INTERVAL_MS = 30_000;
+/** Pixel Kaisha B2.5 (residualAgents.ts): an agent with no event for longer
+ *  than this AND no live session or process is removed from the office. */
+export const RESIDUAL_IDLE_MS = 10 * 60_000;
+/** How often the runtime looks for residual agents. */
+export const RESIDUAL_SWEEP_INTERVAL_MS = 30_000;
+/** How often the runtime checks whether a session-is-its-process CLI (agy)
+ *  has exited: the character leaves within this of `agy -p` finishing. */
+export const PROCESS_EXIT_CHECK_INTERVAL_MS = 2_000;
 /** A paused agent's transcript gets its last records (the stop hook's) a
  *  moment before the notice lands; a write later than this after the notice
  *  means the agent resumed. */
@@ -238,3 +246,27 @@ export const NEW_CONVERSATION_TITLE = 'New conversation';
 /** Most agent ids a saved card order keeps. The order is pruned to live agents
  *  on every save, so this only bounds a hand-edited or hostile payload. */
 export const MAX_CARD_ORDER_LENGTH = 1_000;
+
+// ── Per-agent history (Pixel Kaisha B2.2) ───────────────────
+/** Longest speech text in a history entry, in Unicode code points (`…` included). */
+export const HISTORY_TEXT_MAX = 500;
+/** Longest action label in a history entry, in Unicode code points (`…` included). */
+export const HISTORY_ACTION_MAX = 120;
+/** Entries a requestAgentHistory page holds when it names no limit. */
+export const HISTORY_DEFAULT_LIMIT = 100;
+/** Most entries a requestAgentHistory page may hold; also the cap of a
+ *  hooks-only agent's in-memory history buffer. */
+export const HISTORY_LIMIT_MAX = 500;
+/** Most bytes of a transcript's tail read for one history request. */
+export const HISTORY_READ_MAX_BYTES = 2 * 1024 * 1024;
+/** Most transcript records (lines) parsed for one history request (the newest). */
+export const HISTORY_READ_MAX_RECORDS = 5_000;
+
+// ── Character memory (Pixel Kaisha B2.4) ────────────────────
+/** Most bytes of memory text one characterMemory reply carries (a file larger
+ *  than this is refused; a folder's files are read until it is reached). */
+export const MEMORY_READ_MAX_BYTES = 256 * 1024;
+/** How far into a file a NUL byte marks it binary (unreadable). */
+export const MEMORY_BINARY_SNIFF_BYTES = 8 * 1024;
+/** The file names a memory folder's listing reads (case-insensitive). */
+export const MEMORY_FOLDER_FILE_RE = /\.(?:md|markdown|txt)$/i;

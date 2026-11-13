@@ -164,6 +164,11 @@ export interface HookProvider {
   /** Terminal name prefix used when launching this CLI. Used by the extension to
    *  match VS Code terminals to agents for heuristic adoption. */
   readonly terminalNamePrefix?: string;
+  /** True for a CLI with no session-end hook whose session ends with its
+   *  process: when the pid its hook script reported (`cli_pid`) is gone, the
+   *  runtime feeds the provider a synthetic `{ hook_event_name: 'SessionEnd',
+   *  reason: 'process_exit' }` event, which it must normalize to `sessionEnd`. */
+  readonly sessionEndsWithProcess?: boolean;
 
   /** Context window, in tokens, for a model id this CLI reports in its
    *  transcripts. Transcripts state token usage but never the limit it counts

@@ -17,7 +17,11 @@ import { isPersistedSpawnChild, restoredAgentInit } from './agentPersistence.js'
 import { createAgentState } from './agentState.js';
 import type { AgentStateStore } from './agentStateStore.js';
 import { pausedSpawnFate } from './backgroundSpawns.js';
-import { PAUSED_SPAWN_CHECK_INTERVAL_MS } from './constants.js';
+import {
+  PAUSED_SPAWN_CHECK_INTERVAL_MS,
+  PROCESS_EXIT_CHECK_INTERVAL_MS,
+  RESIDUAL_SWEEP_INTERVAL_MS,
+} from './constants.js';
 import { DismissalTracker } from './dismissalTracker.js';
 import {
   adoptExternalSessionFromHook,
@@ -41,6 +45,7 @@ import type { HookEvent } from './hookEventHandler.js';
 import { HookEventHandler } from './hookEventHandler.js';
 import { assignPaletteIfNeeded } from './paletteAssigner.js';
 import { PathSet, pathsMatch } from './pathKey.js';
+import { isResidualAgent, pidAlive } from './residualAgents.js';
 import { SessionRouter } from './sessionRouter.js';
 import { SubagentWatch } from './subagentWatch.js';
 import { cancelPermissionTimer, cancelWaitingTimer } from './timerManager.js';
@@ -62,6 +67,16 @@ export interface RuntimeLifecycleCallbacks {
   onTeammateRemoved?: (teammateId: number, agent: AgentState, source: string) => void;
 }
 
+/** What the lifecycle sweeps (B2.5) read from the world; injectable for tests. */
+export interface RuntimeLifecycleOptions {
+  /** The clock (ms since epoch). */
+  now?: () => number;
+  /** Is this pid a running process? */
+  isProcessAlive?: (pid: number) => boolean;
+  /** Does the host hold a live terminal (PTY) for this agent? */
+  hasLiveTerminal?: (agentId: number) => boolean;
+}
+
 export class AgentRuntime {
   // Per-agent timer Maps (shared by all fileWatcher/hookEventHandler operations)
   readonly fileWatchers = new Map<number, fs.FSWatcher>();
@@ -79,6 +94,11 @@ export class AgentRuntime {
   private externalScanTimer: ReturnType<typeof setInterval> | null = null;
   private staleCheckTimer: ReturnType<typeof setInterval> | null = null;
   private pausedSpawnTimer: ReturnType<typeof setInterval> | null = null;
+  private processExitTimer: ReturnType<typeof setInterval> | null = null;
+  private residualTimer: ReturnType<typeof setInterval> | null = null;
+  private readonly now: () => number;
+  private readonly isProcessAlive: (pid: number) => boolean;
+  private readonly hasLiveTerminal?: (agentId: number) => boolean;
 
   // Configuration refs (mutable, shared with scanners)
   readonly watchAllSessions = { current: false };
@@ -94,7 +114,11 @@ export class AgentRuntime {
   constructor(
     private readonly store: AgentStateStore,
     private readonly provider: HookProvider,
+    lifecycle: RuntimeLifecycleOptions = {},
   ) {
+    this.now = lifecycle.now ?? Date.now;
+    this.isProcessAlive = lifecycle.isProcessAlive ?? pidAlive;
+    this.hasLiveTerminal = lifecycle.hasLiveTerminal;
     // Wire module-level dependencies
     setDismissalTracker(this.dismissalTracker);
     setHookProvider(provider);
@@ -280,22 +304,86 @@ export class AgentRuntime {
       onTeammateRemoved: (teammateAgentId) => {
         this.removeTeammate(teammateAgentId, 'hooks');
       },
-      onSessionEnd: (agentId) => {
-        const agent = this.store.get(agentId);
-        if (!agent) return;
-        this.dismissalTracker.clearSeededMtime(agent.jsonlFile);
-        this.dismissalTracker.dismiss(agent.jsonlFile);
-        // Covers real team leads AND leads of background teammates (which
-        // have children but no teamName). No-op when childless.
-        this.removeTeammates(agentId);
-        // Unnamed background spawns die with their lead's session too.
-        this.subagentWatch.removeByLead(agentId);
-        if (agent.isExternal) {
-          this.unregisterAgent(agent.sessionId);
-          this.removeAgent(agentId);
+      onSessionEnd: (agentId) => this.endSession(agentId),
+      onHookSubagentStart: (parentId, key, agentType) =>
+        this.addHookSubagent(parentId, key, agentType),
+      onHookSubagentEnd: (parentId, key) => {
+        for (const [id, a] of this.store) {
+          if (a.leadAgentId === parentId && a.hookSubagentId === key) {
+            this.removeTeammate(id, 'subagent-stop');
+            return;
+          }
         }
       },
+      onTurnEnd: () => this.sweepResidualAgents(),
     });
+  }
+
+  /**
+   * A session ended (SessionEnd hook, a session-is-its-process CLI that
+   * exited, or a residual agent): its children go with it, its transcript is
+   * dismissed, and an external agent leaves the office. The ONE end-of-session
+   * path; agents we launched leave with their terminal instead.
+   */
+  private endSession(agentId: number): void {
+    const agent = this.store.get(agentId);
+    if (!agent) return;
+    this.dismissalTracker.clearSeededMtime(agent.jsonlFile);
+    this.dismissalTracker.dismiss(agent.jsonlFile);
+    // Covers real team leads, leads of background teammates (which have
+    // children but no teamName) and hook sub-agents (Codex). No-op when childless.
+    this.removeTeammates(agentId);
+    // Unnamed background spawns die with their lead's session too.
+    this.subagentWatch.removeByLead(agentId);
+    if (agent.isExternal) {
+      this.unregisterAgent(agent.sessionId);
+      this.removeAgent(agentId);
+    }
+  }
+
+  /**
+   * A sub-agent a provider without a TeamProvider announced by hook (Codex
+   * SubagentStart): its own character, tied to its parent (parentAgentId on
+   * agentCreated), wearing the parent's look. It shares the parent's session
+   * (spawnToolUseId set, so removing it never unregisters that session) and
+   * is never persisted. Leaves on its SubagentStop or with its parent.
+   */
+  private addHookSubagent(parentId: number, key: string, agentType: string): void {
+    const parent = this.store.get(parentId);
+    if (!parent) return;
+    for (const a of this.store.values()) {
+      if (a.leadAgentId === parentId && a.hookSubagentId === key) return;
+    }
+    const id = this.store.nextAgentId.current++;
+    const child = createAgentState({
+      id,
+      sessionId: parent.sessionId,
+      isExternal: true,
+      projectDir: parent.projectDir,
+      jsonlFile: '',
+      hooksOnly: true,
+      hookDelivered: true,
+      lastDataAt: this.now(),
+      providerId: parent.providerId,
+      directoryName: parent.directoryName,
+      leadAgentId: parentId,
+      agentName: agentType,
+      spawnToolUseId: `hook-subagent:${key}`,
+      hookSubagentId: key,
+      processPid: parent.processPid,
+      turnActive: true,
+    });
+    if (parent.palette !== undefined) {
+      child.palette = parent.palette;
+      child.repeat = parent.repeat ?? 0;
+    } else {
+      assignPaletteIfNeeded(child, this.store);
+    }
+    this.store.set(id, child);
+    console.log(
+      `[Pixel Agents] Hook sub-agent "${agentType}" (Agent ${id}) for parent Agent ${parentId}`,
+    );
+    this.store.broadcast({ type: 'agentStatus', id, status: 'active' });
   }
 
   /** Register adapter-specific lifecycle callbacks. */
@@ -418,6 +506,71 @@ export class AgentRuntime {
     this.subagentWatch.removeByLead(id);
     this.dismissalTracker.dismiss(agent.jsonlFile);
     this.removeAgent(id);
+  }
+
+  // ── Lifecycle sweeps (Pixel Kaisha B2.5) ──
+
+  /**
+   * Run the lifecycle sweeps while the server runs, client or not: exited
+   * session-is-its-process CLIs (agy) every PROCESS_EXIT_CHECK_INTERVAL_MS,
+   * residual agents every RESIDUAL_SWEEP_INTERVAL_MS.
+   */
+  startLifecycleSweep(): void {
+    if (this.processExitTimer) return;
+    this.processExitTimer = setInterval(
+      () => this.endExitedSessions(),
+      PROCESS_EXIT_CHECK_INTERVAL_MS,
+    );
+    this.residualTimer = setInterval(() => this.sweepResidualAgents(), RESIDUAL_SWEEP_INTERVAL_MS);
+    this.processExitTimer.unref?.();
+    this.residualTimer.unref?.();
+  }
+
+  /**
+   * End the session of every agent whose CLI has no session-end hook
+   * (`sessionEndsWithProcess`) once the pid it reported is gone: the provider
+   * is fed a synthetic SessionEnd, so the end takes the normal hook path
+   * (normalize → handleSessionEnd → onSessionEnd).
+   */
+  endExitedSessions(): void {
+    const ended: AgentState[] = [];
+    for (const agent of this.store.values()) {
+      if (agent.processPid === undefined || agent.leadAgentId !== undefined) continue;
+      if (!agent.providerId || !agent.sessionId) continue;
+      if (!this.hookEventHandler.providerFor(agent.providerId).sessionEndsWithProcess) continue;
+      if (!this.isProcessAlive(agent.processPid)) ended.push(agent);
+    }
+    for (const agent of ended) {
+      console.log(
+        `[Pixel Agents] Agent ${agent.id}: ${agent.providerId} process ${agent.processPid} exited, ending session`,
+      );
+      this.handleHookEvent(agent.providerId!, {
+        hook_event_name: 'SessionEnd',
+        session_id: agent.sessionId,
+        reason: 'process_exit',
+      });
+    }
+  }
+
+  /**
+   * Remove residual agents: no event for more than RESIDUAL_IDLE_MS and no
+   * live session or process (residualAgents.ts). An agent never stamped
+   * (`lastDataAt` 0) is stamped now instead, so it gets the full grace period.
+   */
+  sweepResidualAgents(now = this.now()): void {
+    const residual: number[] = [];
+    for (const [id, agent] of this.store) {
+      if (agent.lastDataAt <= 0) {
+        agent.lastDataAt = now;
+        continue;
+      }
+      const opts = { isProcessAlive: this.isProcessAlive, hasLiveTerminal: this.hasLiveTerminal };
+      if (isResidualAgent(agent, now, opts)) residual.push(id);
+    }
+    for (const id of residual) {
+      console.log(`[Pixel Agents] Agent ${id}: residual (no event, no live session), removing`);
+      this.endSession(id);
+    }
   }
 
   /** Remove all teammates of a lead agent. */
@@ -558,7 +711,13 @@ export class AgentRuntime {
         continue;
       }
 
-      const agent = createAgentState({ ...restoredAgentInit(p), isExternal: true });
+      // The residual clock starts at the restore: a CLI still running sends
+      // its next hook within the grace period (B2.5).
+      const agent = createAgentState({
+        ...restoredAgentInit(p),
+        isExternal: true,
+        lastDataAt: this.now(),
+      });
 
       assignPaletteIfNeeded(agent, this.store);
       this.store.set(p.id, agent);
@@ -630,6 +789,14 @@ export class AgentRuntime {
     if (this.pausedSpawnTimer) {
       clearInterval(this.pausedSpawnTimer);
       this.pausedSpawnTimer = null;
+    }
+    if (this.processExitTimer) {
+      clearInterval(this.processExitTimer);
+      this.processExitTimer = null;
+    }
+    if (this.residualTimer) {
+      clearInterval(this.residualTimer);
+      this.residualTimer = null;
     }
 
     for (const id of this.store.keys()) this.stopWatching(id);

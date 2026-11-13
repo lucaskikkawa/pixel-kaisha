@@ -4,7 +4,9 @@ import {
   CHARACTER_PROFILE_VERSION,
   isCharacterProfile,
   MAX_CHARACTER_PROFILES,
+  MAX_MEMORY_PATH_LENGTH,
   migrateCharacterProfile,
+  normalizeMemoryPath,
   parseCharacterProfiles,
   parsePixId,
   pixId,
@@ -46,6 +48,22 @@ describe('isCharacterProfile / parseCharacterProfiles', () => {
     expect(parsed).not.toBeNull();
     // current-format profiles come back as the very same objects
     parsed!.forEach((profile, i) => expect(profile).toBe(list[i]));
+  });
+
+  it('keeps known default tools and drops invalid ones without rejecting profiles', () => {
+    const valid = parseCharacterProfiles([
+      { id: 'a', body: 'flat', defaultTool: 'codex' },
+      { id: 'b', body: 'flat' },
+      { id: 'c', body: 'flat', defaultTool: 42 },
+      { id: 'd', body: 'flat', defaultTool: null },
+    ])!;
+    expect(valid.map((profile) => profile.defaultTool)).toEqual([
+      'codex',
+      undefined,
+      undefined,
+      undefined,
+    ]);
+    expect(isCharacterProfile({ id: 'bad-tool', body: 'flat', defaultTool: null })).toBe(true);
   });
 
   it('lets unknown keys through, so older formats still reach the migration', () => {
@@ -111,6 +129,55 @@ describe('isCharacterProfile / parseCharacterProfiles', () => {
       Array.from({ length: n }, (_, i) => ({ ...realistic, id: `m${i}` }));
     expect(parseCharacterProfiles(many(MAX_CHARACTER_PROFILES))).not.toBeNull();
     expect(parseCharacterProfiles(many(MAX_CHARACTER_PROFILES + 1))).toBeNull();
+  });
+});
+
+describe('memoryPath (B2.4)', () => {
+  const base = { id: 'a', body: 'flat', v: CHARACTER_PROFILE_VERSION };
+
+  it('keeps a valid path on the same object, per character', () => {
+    const a = { ...base, memoryPath: '/work/repo/CLAUDE.md' };
+    const b = { ...base, id: 'b', memoryPath: '~/.claude/projects/p/memory/' };
+    const c = { ...base, id: 'c' };
+    const parsed = parseCharacterProfiles([a, b, c])!;
+    expect(parsed[0]).toBe(a);
+    expect(parsed[1]).toBe(b);
+    expect(parsed[2]).toBe(c);
+    expect('memoryPath' in parsed[2]).toBe(false);
+  });
+
+  it('an older profile without the field is still valid, and migrates without it', () => {
+    const old = { body: 'light_male', v: 30 };
+    expect(isCharacterProfile(old)).toBe(true);
+    expect('memoryPath' in parseCharacterProfiles([old])![0]).toBe(false);
+    // the migration copies the whole profile, so the field passes through it
+    expect(migrateCharacterProfile({ ...old, memoryPath: '/x/AGENTS.md' }).memoryPath).toBe(
+      '/x/AGENTS.md',
+    );
+  });
+
+  it.each([
+    ['empty', ''],
+    ['blank', '   '],
+    ['relative', 'CLAUDE.md'],
+    ['~user', '~bob/CLAUDE.md'],
+    ['too long', '/' + 'a'.repeat(MAX_MEMORY_PATH_LENGTH)],
+    ['a NUL', '/x\0y'],
+    ['not a string', 42],
+  ])('drops a %s memoryPath without refusing the profile', (_label, memoryPath) => {
+    const profile = { ...base, memoryPath };
+    expect(isCharacterProfile(profile)).toBe(true);
+    const [parsed] = parseCharacterProfiles([profile])!;
+    expect(parsed).toEqual(base);
+    expect('memoryPath' in parsed).toBe(false);
+  });
+
+  it('trims and accepts absolute, home and Windows paths', () => {
+    expect(normalizeMemoryPath('  /a/GEMINI.md ')).toBe('/a/GEMINI.md');
+    expect(normalizeMemoryPath('~')).toBe('~');
+    expect(normalizeMemoryPath('~/CLAUDE.md')).toBe('~/CLAUDE.md');
+    expect(normalizeMemoryPath('C:\\repo\\AGENTS.md')).toBe('C:\\repo\\AGENTS.md');
+    expect(normalizeMemoryPath('/' + 'a'.repeat(MAX_MEMORY_PATH_LENGTH - 1))).toBeDefined();
   });
 });
 

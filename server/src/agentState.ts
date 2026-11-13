@@ -33,6 +33,8 @@ export function createAgentState(init: AgentStateInit): AgentState {
     // Balloon summary (B2.1): empty until the first speech / tool event.
     speech: undefined,
     action: undefined,
+    // Rooms (B2.3): a new agent rests until its first real activity.
+    room: 'rest',
     lastDataAt: 0,
     linesProcessed: 0,
     seenUnknownRecordTypes: new Set(),

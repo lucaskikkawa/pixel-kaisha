@@ -236,12 +236,82 @@ export function dispatchMockMessages(): void {
   dispatch({ type: 'carpetTilesLoaded', sets: carpetSets });
   dispatch({ type: 'furnitureAssetsLoaded', catalog: furnitureCatalog, sprites: furnitureSprites });
   dispatch({ type: 'layoutLoaded', layout });
+  if (new URLSearchParams(window.location.search).get('mock') === 'history') {
+    dispatch({
+      type: 'existingAgents',
+      agents: [],
+      agentMeta: {},
+      directoryNames: {},
+      externalAgents: {},
+    });
+    dispatch({
+      type: 'agentCreated',
+      id: 1,
+      directoryName: 'History Demo',
+      providerId: 'claude',
+      palette: 0,
+    });
+    dispatch({
+      type: 'agentCreated',
+      id: 2,
+      directoryName: 'History Demo',
+      providerId: 'codex',
+      palette: 1,
+      isTeammate: true,
+      parentAgentId: 1,
+      teamName: 'Kaisha Web',
+      teammateName: 'Codex',
+    });
+    dispatch({
+      type: 'agentCreated',
+      id: 3,
+      directoryName: 'History Demo',
+      providerId: 'agy',
+      palette: 2,
+    });
+  }
   dispatch({
     type: 'settingsLoaded',
     soundEnabled: false,
     extensionVersion: '1.3.0',
     lastSeenVersion: '1.2',
   });
+
+  // `?mock=status` adds a small multi-provider roster for the F2.5 status panel.
+  if (new URLSearchParams(window.location.search).get('mock') === 'status') {
+    const statusAgents = [71, 72, 73];
+    statusAgents.forEach((id, index) =>
+      dispatch({
+        type: 'agentCreated',
+        id,
+        palette: index,
+        providerId: ['claude', 'codex', 'agy'][index],
+        directoryName: `workspace-${index + 1}`,
+      }),
+    );
+    dispatch({
+      type: 'agentToolStart',
+      id: 71,
+      toolId: 'mock-read',
+      status: 'Reading auth.ts',
+      toolName: 'Read',
+    });
+    window.setTimeout(
+      () => dispatch({ type: 'agentStatus', id: 72, status: 'waiting', awaitingInput: true }),
+      1800,
+    );
+    window.setTimeout(
+      () => dispatch({ type: 'agentStatus', id: 73, status: 'waiting', awaitingInput: false }),
+      3600,
+    );
+    // Add `&live=1` to advance the fixture from waiting to finished for notification demos.
+    if (new URLSearchParams(window.location.search).get('live') === '1') {
+      window.setTimeout(
+        () => dispatch({ type: 'agentStatus', id: 72, status: 'waiting', awaitingInput: false }),
+        6000,
+      );
+    }
+  }
 
   console.log('[BrowserMock] Messages dispatched');
 }

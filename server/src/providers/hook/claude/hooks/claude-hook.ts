@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 
 import { HOOK_API_PREFIX } from '../../../../constants.js';
+import { cliProcessPid } from '../../shared/cliPid.js';
 import { liveServers, postToServer } from './serverRegistry.js';
 
 /** Per-server POST timeout. */
@@ -58,6 +59,10 @@ async function main(): Promise<void> {
     if (withDebugLog?.debugLog) debugLogPath = withDebugLog.debugLog;
   }
 
+  // Claude Code's own pid, so the server can tell a live session from a
+  // residual one (Pixel Kaisha B2.5).
+  const cliPid = cliProcessPid();
+  if (cliPid !== undefined) data.cli_pid = cliPid;
   const body = JSON.stringify(data);
   await Promise.all(
     servers.map((server) =>

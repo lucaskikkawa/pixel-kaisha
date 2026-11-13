@@ -1,5 +1,9 @@
 import { useRef, useState } from 'react';
 
+import {
+  enableBrowserNotifications,
+  isBrowserNotificationsEnabled,
+} from '../agentNotifications.js';
 import { officeRadio } from '../music/musicEngine.js';
 import { useOfficeRadio } from '../music/useOfficeRadio.js';
 import { isSoundEnabled, setSoundEnabled } from '../notificationSound.js';
@@ -75,6 +79,7 @@ export function SettingsModal({
   // The office radio's player is a per-browser setting the radio keeps itself.
   const radio = useOfficeRadio();
   const [soundLocal, setSoundLocal] = useState(isSoundEnabled);
+  const [browserNotifications, setBrowserNotifications] = useState(isBrowserNotificationsEnabled);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [assetDirDraft, setAssetDirDraft] = useState('');
   // Usage Bars: installing rewrites the user's status line, so it asks first
@@ -203,6 +208,16 @@ export function SettingsModal({
             transport.send({ type: 'setSoundEnabled', enabled: newVal });
           }}
         />
+        {isBrowserRuntime && (
+          <Checkbox
+            label="Browser notifications"
+            checked={browserNotifications}
+            onChange={async () => {
+              const granted = await enableBrowserNotifications(!browserNotifications);
+              setBrowserNotifications(granted);
+            }}
+          />
+        )}
         <Checkbox
           label="Music Player"
           title="The office radio's player, bottom of the office"
