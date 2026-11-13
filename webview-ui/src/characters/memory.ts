@@ -24,6 +24,20 @@ export function requestCharacterMemory(
   return message;
 }
 
+/**
+ * The request for Show memory: the field is compared with the path already SAVED for
+ * this profile (the roster's list, not the view's draft, which holds the field's own
+ * value), so an unsaved path is sent and read instead of the saved one.
+ */
+export function requestCharacterMemoryFromSaved(
+  profileId: string,
+  draftPath: string,
+  savedProfiles: readonly { id?: string; memoryPath?: string }[],
+): ClientMessage {
+  const saved = savedProfiles.find((profile) => profile.id === profileId);
+  return requestCharacterMemory(profileId, draftPath, saved?.memoryPath);
+}
+
 export const CHARACTER_MEMORY_WARNINGS: Record<string, string> = {
   'not-found': 'Memory path was not found.',
   'not-a-file': 'The path is not a regular file or folder.',

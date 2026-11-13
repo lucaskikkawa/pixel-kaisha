@@ -255,6 +255,16 @@ export const SUMMARY_BALLOON_STEP_PX = 4;
 /** How often (ms) the balloons re-read where the UI over the office sits. */
 export const CONTROL_RECTS_REFRESH_MS = 250;
 
+// ── Agent history panel (phone) ─────────────────────────────
+/** CSS px the phone's history panel keeps from the viewport's edges and above the bottom chrome. */
+export const HISTORY_PANEL_EDGE_PX = 8;
+/** What counts as bottom chrome for it: the controls the balloons avoid, plus anything marked. */
+export const HISTORY_PANEL_CHROME_SELECTOR =
+  'button, a[href], input, select, textarea, [role="button"], .pixel-panel, [data-bottom-chrome]';
+/** A control is bottom chrome when its top is in the viewport's lowest fifth (as for the
+ *  balloons); a `[data-bottom-chrome]` element always is. */
+export const HISTORY_PANEL_CHROME_MIN_TOP_SHARE = 0.8;
+
 // ── Greeter + Intro bubble ──────────────────────────────────
 /** Reserved character id for the Intro's greeter. Far outside both real agent
  *  ids (positive) and sub-agent ids (small negatives from -1 down). */

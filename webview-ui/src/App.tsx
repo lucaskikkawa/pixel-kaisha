@@ -23,7 +23,8 @@ import { VersionIndicator } from './components/VersionIndicator.js';
 import { MobileZoomLevel, ZoomControls } from './components/ZoomControls.js';
 import { CONVERSATION_SIDEBAR_WIDTH_PX, OFFICE_CANVAS_TEST_ID } from './constants.js';
 import { AgentHistoryPanel } from './conversations/AgentHistoryPanel.js';
-import { earlierHistoryRequest, mergeEarlierEntries } from './conversations/agentHistoryView.js';
+import { createAgentHistorySource, isHistoryMock } from './conversations/agentHistorySource.js';
+import { mergeEarlierEntries } from './conversations/agentHistoryView.js';
 import type { ConversationSearchScope } from './conversations/ConversationList.js';
 import { ConversationSearch } from './conversations/ConversationSearch.js';
 import { ConversationSidebar } from './conversations/ConversationSidebar.js';
@@ -184,24 +185,29 @@ function App() {
       ? 'overlay'
       : 'side';
   });
+  // Pixel Kaisha: `?mock=history` shows the fixture and never asks the server (whose
+  // answer for agent 1 would otherwise replace it, unknown-agent, on a live office).
+  const historySource = useMemo(() => {
+    const mock = isHistoryMock(window.location.search);
+    return createAgentHistorySource(mock, (msg) => transport.send(msg));
+  }, []);
   const agentNames = useMemo(
     () =>
       new Map(
         agents.map((id) => {
-          const mockName =
-            new URLSearchParams(window.location.search).get('mock') === 'history'
-              ? ({ 1: 'Claude', 2: 'Codex', 3: 'agy' } as Record<number, string>)[id]
-              : undefined;
+          const mockName = historySource.mock
+            ? ({ 1: 'Claude', 2: 'Codex', 3: 'agy' } as Record<number, string>)[id]
+            : undefined;
           return [id, getOfficeState().characters.get(id)?.agentName ?? mockName ?? `Agent ${id}`];
         }),
       ),
-    [agents],
+    [agents, historySource],
   );
   const closeAgentHistory = useCallback(() => setHistoryAgentId(null), []);
   useEffect(
     () =>
       transport.onMessage((msg) => {
-        if (msg.type === 'agentHistory' && msg.id === historyAgentId) {
+        if (historySource.accepts(msg, historyAgentId)) {
           const isEarlierPage = pendingHistoryBefore.current !== null;
           pendingHistoryBefore.current = null;
           setAgentHistory((current) =>
@@ -216,108 +222,28 @@ function App() {
           );
         }
       }),
-    [historyAgentId],
+    [historyAgentId, historySource],
   );
-  const openAgentHistory = useCallback((id: number) => {
-    setHistoryAgentId(id);
-    setAgentHistory(null);
-    pendingHistoryBefore.current = null;
-    transport.send({ type: 'requestAgentHistory', id });
-    if (new URLSearchParams(window.location.search).get('mock') === 'history') {
-      const now = Date.now();
-      const shared = id === 1 || id === 2;
-      const author = id;
-      const actionEntries = [
-        {
-          ts: now - 120000,
-          kind: 'action' as const,
-          toolName: 'Read',
-          text: 'Leu os módulos de sessão e autenticação.',
-          ...(shared ? { shared: true, teamName: 'Kaisha Web' } : {}),
-          authorAgentId: author,
-        },
-        {
-          ts: now - 60000,
-          kind: 'action' as const,
-          toolName: id === 2 ? 'Search' : 'Edit',
-          text:
-            id === 2
-              ? 'Pesquisou referências de autenticação.'
-              : 'Atualizou o estado local do agente.',
-          ...(shared ? { shared: true, teamName: 'Kaisha Web' } : {}),
-          authorAgentId: author,
-        },
-      ];
-      const mockEntries =
-        id === 1
-          ? [
-              {
-                ts: now - 180000,
-                kind: 'speech' as const,
-                role: 'user' as const,
-                text: 'Revise o fluxo de autenticação e resuma os próximos passos.',
-                shared: true,
-                teamName: 'Kaisha Web',
-                authorAgentId: id,
-              },
-              actionEntries[0],
-              {
-                ts: now - 60000,
-                kind: 'speech' as const,
-                role: 'assistant' as const,
-                text: 'O fluxo está consistente; vou registrar os testes que faltam.',
-                shared: true,
-                teamName: 'Kaisha Web',
-                authorAgentId: 2,
-              },
-            ]
-          : actionEntries;
-      setAgentHistory({
-        type: 'agentHistory',
-        id,
-        entries: mockEntries,
-        more: id === 1,
-        ...(shared
-          ? { group: { teamName: 'Kaisha Web', leadAgentId: 1, memberAgentIds: [1, 2] } }
-          : {}),
-      });
-    }
-  }, []);
+  const openAgentHistory = useCallback(
+    (id: number) => {
+      setHistoryAgentId(id);
+      pendingHistoryBefore.current = null;
+      setAgentHistory(historySource.open(id));
+    },
+    [historySource],
+  );
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get('mock') !== 'history') return;
+    if (!historySource.mock) return;
     const timer = window.setTimeout(() => openAgentHistory(1), 1600);
     return () => window.clearTimeout(timer);
-  }, [openAgentHistory]);
+  }, [historySource, openAgentHistory]);
   const loadEarlierHistory = useCallback(() => {
-    if (historyAgentId === null || !agentHistory?.entries.length) return;
-    const request = earlierHistoryRequest(historyAgentId, agentHistory.entries);
-    if (request) {
-      pendingHistoryBefore.current = request.before;
-      transport.send(request);
-    }
-    if (new URLSearchParams(window.location.search).get('mock') === 'history') {
-      setAgentHistory((current) =>
-        current
-          ? {
-              ...current,
-              more: false,
-              entries: [
-                {
-                  ts: current.entries[0].ts - 60000,
-                  kind: 'action',
-                  toolName: 'Search',
-                  text: 'Pesquisou referências anteriores do histórico.',
-                  shared: true,
-                  teamName: current.group?.teamName,
-                  authorAgentId: historyAgentId,
-                },
-                ...current.entries,
-              ],
-            }
-          : current,
-      );
-    }
-  }, [historyAgentId, agentHistory]);
+    if (historyAgentId === null || !agentHistory) return;
+    const earlier = historySource.earlier(historyAgentId, agentHistory);
+    if (!earlier) return;
+    if ('history' in earlier) setAgentHistory(earlier.history);
+    else pendingHistoryBefore.current = earlier.before;
+  }, [historyAgentId, agentHistory, historySource]);
   const changeHistoryMode = useCallback((mode: 'side' | 'overlay') => {
     setHistoryMode(mode);
     window.localStorage.setItem('pixel-kaisha-history-mode', mode);
@@ -1080,6 +1006,7 @@ function App() {
           onClose={closeAgentHistory}
           onEarlier={loadEarlierHistory}
           names={agentNames}
+          phone={isMobile}
         />
       )}
 
