@@ -37,6 +37,10 @@ Pixel Kaisha is a fork of [Pixel Agents](https://github.com/pixel-agents-hq/pixe
 - `?mock=history` with a live server at 412×915 and 360×374 shows "History unavailable (unknown-agent)".
 - A restored Claude transcript agent stays in the office for 10+ minutes (non-hooks agents are treated as always having an active session).
 
+### Fixed
+
+- A Claude agent restored or adopted from its transcript, with no terminal, no known pid and no turn in progress, now leaves the office after 10 minutes without a hook event or transcript line, like hooks-only agents; it used to be treated as always live and stayed indefinitely. The restore no longer leaves the agent looking mid-turn: it does not reread the old transcript, so its default `isWaiting: false` is not taken as a turn in progress until a new hook event or transcript line arrives ([#31](https://github.com/lucaskikkawa/pixel-kaisha/pull/31)). Agents with a live terminal, a running CLI pid, or an active turn, tool, or background spawn are still never removed.
+
 ## [0.1.1] - 2026-11-10
 
 ### Fixed

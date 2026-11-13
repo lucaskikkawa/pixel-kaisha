@@ -450,9 +450,11 @@ export class HookEventHandler {
   }
 
   /** Every delivered event: the agent was heard from now (residual clock),
-   *  and the hook script may have named the CLI's pid. */
+   *  its turn state is observed from here on, and the hook script may have
+   *  named the CLI's pid. */
   private noteEvent(agent: AgentState, event: HookEvent): void {
     agent.lastDataAt = Date.now();
+    agent.turnUnobserved = undefined;
     const pid = reportedCliPid(event);
     if (pid !== undefined) agent.processPid = pid;
   }
