@@ -9,6 +9,15 @@ Pixel Kaisha is a fork of [Pixel Agents](https://github.com/pixel-agents-hq/pixe
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-12
+
+### Fixed
+
+- The README no longer lists Antigravity `SessionEnd` as a limitation ([#32](https://github.com/lucaskikkawa/pixel-kaisha/pull/32)).
+- "Show memory" on an unsaved draft now uses the new path and warns when it is not found, before Save ([#32](https://github.com/lucaskikkawa/pixel-kaisha/pull/32)).
+- `?mock=history` with a live server on small screens (412×915, 360×374) no longer shows "History unavailable (unknown-agent)" ([#32](https://github.com/lucaskikkawa/pixel-kaisha/pull/32)).
+- A restored Claude transcript agent now follows the residual-agent lifecycle instead of staying in the office for 10+ minutes ([#31](https://github.com/lucaskikkawa/pixel-kaisha/pull/31)).
+
 ## [0.2.0] - 2026-11-12
 
 ### Added
