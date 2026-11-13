@@ -43,17 +43,20 @@ function fakeOffice(existing: number[] = []): ExistingAgentsOffice & {
   headless: number[];
   synced: Array<{ id: number } & ExistingAgentMeta>;
   rested: number[];
+  roomCalls: Array<{ id: number; room: 'work' | 'meeting' | 'rest' }>;
 } {
   const ids = new Set(existing);
   const calls: AddAgentCall[] = [];
   const headless: number[] = [];
   const synced: Array<{ id: number } & ExistingAgentMeta> = [];
   const rested: number[] = [];
+  const roomCalls: Array<{ id: number; room: 'work' | 'meeting' | 'rest' }> = [];
   return {
     calls,
     headless,
     synced,
     rested,
+    roomCalls,
     characters: { has: (id: number) => ids.has(id) },
     addAgent: (id, palette, repeat, seatId, skipSpawnEffect, directoryName) => {
       ids.add(id);
@@ -68,6 +71,7 @@ function fakeOffice(existing: number[] = []): ExistingAgentsOffice & {
     restAgent: (id) => {
       rested.push(id);
     },
+    setAgentRoom: (id, room) => roomCalls.push({ id, room }),
   };
 }
 
@@ -151,6 +155,16 @@ test('layout ready: an agent the office already shows takes the server look and 
   reconcileExistingAgents(os, [5], meta, {}, true, pending);
 
   assert.deepEqual(os.synced, [{ id: 5, palette: 2, repeat: 0, seatId: 'seat-a' }]);
+});
+
+test('snapshot rooms are applied to restored and already shown agents', () => {
+  const os = fakeOffice([5]);
+  const pending: PendingAgent[] = [];
+  reconcileExistingAgents(os, [5, 6], {}, {}, true, pending, {}, { 5: 'meeting', 6: 'rest' });
+  assert.deepEqual(os.roomCalls, [
+    { id: 5, room: 'meeting' },
+    { id: 6, room: 'rest' },
+  ]);
 });
 
 test('layout ready: a mixed roster adds only the missing agent', () => {

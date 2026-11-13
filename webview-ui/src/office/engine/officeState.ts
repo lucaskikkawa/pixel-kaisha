@@ -159,6 +159,38 @@ export class OfficeState {
     this.areaMappings = mappings;
   }
 
+  /** Focus a named part of the current office. These three points correspond
+   * to the existing desk bank, meeting room and furnished lounge. */
+  roomCenter(room: 'work' | 'meeting' | 'rest'): { x: number; y: number } {
+    const { cols, rows } = this.layout;
+    const loungeSofaRow = this.layout.furniture
+      .filter((item) => item.type === 'SOFA_FRONT')
+      .reduce((bottom, item) => Math.max(bottom, item.row), 0);
+    const point =
+      room === 'work'
+        ? { col: Math.round(cols * 0.25), row: Math.round(rows * 0.48) }
+        : room === 'meeting'
+          ? { col: Math.round(cols * 0.73), row: Math.round(rows * 0.54) }
+          : {
+              col: Math.round(cols * 0.72),
+              row:
+                loungeSofaRow > rows - 5 ? Math.max(1, loungeSofaRow - 1) : Math.round(rows * 0.9),
+            };
+    return { x: (point.col + 0.5) * TILE_SIZE, y: (point.row + 0.5) * TILE_SIZE };
+  }
+
+  /** Apply only server room updates. A missing/invalid update is ignored. */
+  setAgentRoom(id: number, room: 'work' | 'meeting' | 'rest'): void {
+    const ch = this.characters.get(id);
+    if (!ch || !['work', 'meeting', 'rest'].includes(room)) return;
+    ch.room = room;
+    const center = this.roomCenter(room);
+    const col = Math.max(1, Math.min(this.layout.cols - 2, Math.floor(center.x / TILE_SIZE)));
+    const row = Math.max(1, Math.min(this.layout.rows - 2, Math.floor(center.y / TILE_SIZE)));
+    const target = this.closestFreeWalkableTile(col, row);
+    if (target) this.walkToTile(id, target.col, target.row);
+  }
+
   constructor(layout?: OfficeLayout) {
     this.layout = layout || createDefaultLayout();
     this.tileMap = layoutToTileMap(this.layout);

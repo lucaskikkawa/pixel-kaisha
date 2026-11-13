@@ -313,5 +313,48 @@ export function dispatchMockMessages(): void {
     }
   }
 
+  // `?mock=rooms` renders the three server room snapshots side by side in the
+  // default office. It uses fixture-only IDs and does not contact a server.
+  if (new URLSearchParams(window.location.search).get('mock') === 'rooms') {
+    const ids = [31, 32, 33];
+    dispatch({
+      type: 'existingAgents',
+      agents: ids,
+      agentMeta: {
+        31: { palette: 0 },
+        32: { palette: 1 },
+        33: { palette: 2 },
+      },
+      directoryNames: {},
+      externalAgents: {},
+      providerIds: { 31: 'claude', 32: 'codex', 33: 'agy' },
+      rooms: { 31: 'work', 32: 'meeting', 33: 'rest' },
+    });
+    dispatch({
+      type: 'agentToolStart',
+      id: 31,
+      toolId: 'room-work',
+      status: 'Reading files',
+      toolName: 'Read',
+    });
+    dispatch({
+      type: 'agentToolStart',
+      id: 32,
+      toolId: 'room-meeting',
+      status: 'Discussing',
+      toolName: 'Task',
+    });
+    dispatch({ type: 'agentStatus', id: 33, status: 'waiting', awaitingInput: false });
+    // `&live=1` demos an authoritative room update into work and a client
+    // chosen meeting assignment; activity does not release the meeting hold.
+    if (new URLSearchParams(window.location.search).get('live') === '1') {
+      window.setTimeout(() => {
+        dispatch({ type: 'agentStatus', id: 33, status: 'active' });
+        dispatch({ type: 'agentRoom', id: 33, room: 'work' });
+      }, 3000);
+      window.setTimeout(() => dispatch({ type: 'agentRoom', id: 31, room: 'meeting' }), 5000);
+    }
+  }
+
   console.log('[BrowserMock] Messages dispatched');
 }
